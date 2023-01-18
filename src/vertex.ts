@@ -161,8 +161,11 @@ export class Vertex {
 
 		this._group.mousedown(this.mouseDown.bind(this));
 		//this._circle.mousedown(this.mouseDown);
-		//this._group.mouseenter(this.mouseEnter.bind(this));
-		//this._group.mouseleave(this.mouseLeave.bind(this));
+		this._group.mouseenter(this.mouseEnter.bind(this));
+		this._group.mouseleave(this.mouseLeave.bind(this));
+
+		this._group.mouseover(this.mouseOver.bind(this));
+
 		this._group.click((ev) => (ev as MouseEvent).stopPropagation());
 		//this._circle.click((ev)=>(ev as MouseEvent).stopPropagation());
 		// // this.on('touchstart', this.mouseDown);
@@ -184,9 +187,16 @@ export class Vertex {
 	}
 
 	moveTo(x: number, y: number) {
-		this._circle.cx(x).cy(y);
-		this._text.cx(x).cy(y);
+		// this._circle.cx(x).cy(y);
+		// this._text.cx(x).cy(y);
+		this._group.transform({translateX:x, translateY:y});
 		this.atom.setCoord2D({x:x, y:y});
+	}
+
+	mouseOver(){
+		console.log('mouse OVER');
+		console.log(this._text.text());
+		settingsService.hoveredVertex=this;
 	}
 
 	mouseEnter() {
@@ -215,6 +225,10 @@ export class Vertex {
 	}
 
 	public dispose() {
+
+		this._group.mousedown(null);
+		this._group.remove();
+
 		// this.attachments.forEach(v=>{
 		// 	this.canvas?.remove(v);
 		// });
@@ -323,7 +337,7 @@ export class Vertex {
 	mouseDown(ev: MouseEvent) {
 		(ev as MouseEvent).stopImmediatePropagation();
 		console.log("mousedown!");
-		// 	this._hasMoved=false;
+		this._hasMoved=false;
 
 		if (settingsService.isMoveable) {
 
@@ -335,8 +349,10 @@ export class Vertex {
 		} else if (settingsService.isDrawMode) {
 
 
-			
-			this._group.mousemove(this.mouseMove.bind(this));
+			this._mouseMoveEventRef = this.mouseMove.bind(this);
+			this._mouseUpEventRef = this.mouseUp.bind(this);
+			this._svg.mousemove(this._mouseMoveEventRef);
+			this._svg.mouseup(this._mouseUpEventRef);
 			// 		this.canvas?.on('mouse:move', this._mouseMoveEventRef);
 			// 		//window.addEventListener('pointermove', this._mouseMoveEventRef);
 			// 		this._mouseUpEventRef = this.mouseUp.bind(this);
@@ -422,6 +438,106 @@ export class Vertex {
 
 	}
 
+	mouseUp(ev:MouseEvent){
+		this._svg.off('mousemove', this._mouseMoveEventRef);
+		this._svg.off('mouseup', this._mouseUpEventRef);
+		// 	this.canvas?.off('mouse:up', this._mouseUpEventRef);
+
+		if (settingsService.currentBondType == BondType.lonePair) {
+		// 		// let vertexCenter = this._tempLP.owner.getCenterPoint();
+		// 		// let currentPoint = this.canvas.getPointer(ev);
+		// 		// let vect = new fabric.Point(currentPoint.x-vertexCenter.x,currentPoint.y-vertexCenter.x);
+		// 		// let angle = Math.atan2(vect.y, vect.x);
+		// 		// let length = Math.sqrt(Math.pow(vect.x,2) + Math.pow(vect.y,2));
+		// 		// let normVect = new fabric.Point(vect.x/length, vect.y/length);
+
+		// 		// this._tempLP.set({
+		// 		// 	angle:angle,
+		// 		// 	left: normVect.x * (this._tempLP.rx + this._circle.radius),
+		// 		// 	top: normVect.y * (this._tempLP.rx + this._circle.radius)
+		// 		// });
+		// 		this.updateAriaLabel();
+
+		} else {
+
+		// 		this._tempVertex.evented=true;
+		// 		this._tempLine.setEvented(true);
+
+			if (settingsService.hoveredVertex !== null || !this._hasMoved){
+				// hovering over an existing vertex
+				if (settingsService.hoveredVertex == this || !this._hasMoved){
+					console.log("Overwriting vertex with temp one");
+					// we're releasing mouse on same vertex we started with, just change vertex id to new atom (if different)
+					this._text.text(settingsService.currentElement);
+					this.atom.setSymbol(settingsService.currentElement);
+					this._symbol.next(settingsService.currentElement);
+		// 				//this.canvas.remove(this._tempLine);
+		//			this.canvas.remove(this._tempVertex);
+		// 				this._tempLine.dispose();
+					this._tempVertex.dispose();
+		// 				this.attachments.splice(this.attachments.indexOf(this._tempLine),1);
+		 			
+		// 				this._symbol.next(settingsService.currentElement);
+				} else {
+		// 				// attach bond to existing atom
+		// 				//this.canvas.remove(this._tempLine);
+		// 				//this.canvas.remove(this._tempVertex);
+		// 				this._tempLine.dispose();
+		// 				this._tempVertex.dispose();
+		// 				this.attachments.splice(this.attachments.indexOf(this._tempLine),1);
+
+		// 				// is there a connector already there?
+		// 				let connectorExists:boolean = false;
+		// 				for (var i=0; i<this.attachments.length; i++){
+		// 					if (this.attachments[i] instanceof Connector){
+		// 						let connector = this.attachments[i] as Connector;
+		// 						if (connector._vertex1 == settingsService.hoveredVertex || connector._vertex2 == settingsService.hoveredVertex){
+		// 							// so one of the connectors on the starting vertex has a connected vertex of the hovered vertex... 
+		// 							// we need to transform that connector to whatever we have selected and not add anything new.
+		// 							connector.setBondType(settingsService.currentBondType);
+		// 							//connector._bondType = settingsService.currentBondType;
+		// 							connector.set({dirty:true});
+		// 							this.canvas?.renderAll();
+		// 							connectorExists=true;
+		// 						}
+		// 					}
+		// 				}
+		// 				if (!connectorExists){
+		// 					if (settingsService.hoveredVertex == null){
+		// 						return;
+		// 					}
+		// 					let center = this.getCenterPoint();
+		// 					let otherCenter = settingsService.hoveredVertex.getCenterPoint();
+		// 					this._tempLine = new Connector([center.x, center.y, otherCenter.x, otherCenter.y],{
+		// 						vertex1: this,
+		// 						vertex2: settingsService.hoveredVertex,
+		// 						bondType: settingsService.currentBondType,
+		// 						evented:false,
+		// 						molecule:this._molecule
+		// 					});
+		// 					this.canvas?.add(this._tempLine);
+		// 					this._tempLine.sendToBack();
+
+		// 					this.addConnector(this._tempLine);
+		// 					//this.attachments.push(this._tempLine);	
+		// 					settingsService.hoveredVertex.addConnector(this._tempLine);
+
+		// 					//settingsService.hoveredVertex.attachments.push(this._tempLine);
+		// 				}
+				}
+
+
+	 		} else {
+		// 			this._tempVertex.setCoords();
+	 		}
+		// 		this._tempLine.setCoords();
+
+		}
+
+		// 	this.canvas?.renderAll();
+		// 	//console.log('mouseup!');
+	}
+
 	// public addConnector(connector:Connector){
 	// 	let sub = connector.BondType.subscribe(x=>{
 	// 		this.updateAriaLabel();
@@ -466,6 +582,7 @@ export class Vertex {
 		const bounds = this._svg.node.getBoundingClientRect();
 		console.log("mouse move!");
 		const old = this._group.transform();
+		this._hasMoved=true;
 		if (old.translateX ===undefined){
 			throw "ERROR!";
 		}
@@ -504,7 +621,10 @@ export class Vertex {
 
 			} else {
 
-				this._tempVertex.moveTo(ev.clientX - bounds.left - old.translateX, ev.clientY - bounds.top - old.translateY);
+				// console.log("X: " + (ev.clientX - bounds.left - old.translateX).toString() + ",  Y: " + (ev.clientY - bounds.top - old.translateY).toString());
+				// this._tempVertex.moveTo(ev.clientX - bounds.left - old.translateX, ev.clientY - bounds.top - old.translateY);
+				//console.log("X: " + (ev.clientX - bounds.left).toString() + ",  Y: " + (ev.clientY - bounds.top).toString());
+				this._tempVertex.moveTo(ev.clientX - bounds.left, ev.clientY- bounds.top);
 				//this._tempVertex.atom.setCoord2D({ev.clientX - bounds.left - old.translateX, ev.clientY - bounds.top - old.translateY});
 				
 				//.set({

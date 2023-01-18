@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable } from 'rxjs';
-//import { Vertex } from '../vertex';
+import { Vertex } from '../vertex';
 import { observable } from '@microsoft/fast-element';
 
 export enum InteractionMode{
@@ -56,7 +56,7 @@ export class SettingsService {
 
 	public currentBondType:BondType;
 
-	//public hoveredVertex:Vertex|null = null;
+	public hoveredVertex:Vertex|null = null;
 
 	constructor(){
 		// this.whenMovable = this._isMovableSubject.asObservable();
