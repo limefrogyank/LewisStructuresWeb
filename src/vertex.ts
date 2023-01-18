@@ -160,10 +160,9 @@ export class Vertex {
 
 
 		this._group.mousedown(this.mouseDown.bind(this));
-		this._group.mousemove(this.mouseMove.bind(this));
 		//this._circle.mousedown(this.mouseDown);
-		this._group.mouseenter(this.mouseEnter.bind(this));
-		this._group.mouseleave(this.mouseLeave.bind(this));
+		//this._group.mouseenter(this.mouseEnter.bind(this));
+		//this._group.mouseleave(this.mouseLeave.bind(this));
 		this._group.click((ev) => (ev as MouseEvent).stopPropagation());
 		//this._circle.click((ev)=>(ev as MouseEvent).stopPropagation());
 		// // this.on('touchstart', this.mouseDown);
@@ -336,7 +335,8 @@ export class Vertex {
 		} else if (settingsService.isDrawMode) {
 
 
-			// 		this._mouseMoveEventRef = this.mouseMoveBondDrawing.bind(this);
+			
+			this._group.mousemove(this.mouseMove.bind(this));
 			// 		this.canvas?.on('mouse:move', this._mouseMoveEventRef);
 			// 		//window.addEventListener('pointermove', this._mouseMoveEventRef);
 			// 		this._mouseUpEventRef = this.mouseUp.bind(this);
