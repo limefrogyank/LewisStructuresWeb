@@ -21,7 +21,8 @@
     "@fluentui/web-components": "^2.5.3",
     "@microsoft/fast-components": "^2.30.6",
     "@microsoft/fast-element": "^1.10.4",
-    "fabric": "^5.2.1",
+    "@svgdotjs/svg.draggable.js": "^3.0.2",
+    "@svgdotjs/svg.js": "^3.1.2",
     "kekule": "^1.0.0",
     "rxjs": "^7.4.0",
     "terser-webpack-plugin": "^5.3.3"

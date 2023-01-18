@@ -1,8 +1,8 @@
 //import { Kekule as k} from './kekule/dist/kekule.js';
 import {Kekule as k} from 'kekule';
-import {Vertex} from './vertex';
-import {Connector} from './connector';
-import {LonePair} from './lonePair';
+// import {Vertex} from './vertex';
+// import {Connector} from './connector';
+// import {LonePair} from './lonePair';
 
 declare global{
 	interface Window{
@@ -221,7 +221,7 @@ export namespace Kekule{
 		setMassNumber(massNumber:number):Atom;
 		setIsotopeId(isotopeId:string):Atom;
 
-		canvasVertex: Vertex;
+		//canvasVertex: Vertex;
 	}
 	export interface Psuedoatom extends AbstractAtom {
 		
@@ -292,7 +292,7 @@ export namespace Kekule{
 		setBondType(bondType:BondType):Bond;
 		setConnectedObjs(atomArray: Atom[]):Bond;
 
-		canvasConnector: Connector;
+		//canvasConnector: Connector;
 	}
 
 	export interface ElectronSet extends ChemObject{
@@ -326,7 +326,7 @@ export namespace Kekule{
 	
 			coord2D:Coordinates2D; //hack... doesn't appear on any base classes, but appears in javascript...
 
-			canvasLonePair: LonePair;
+			//canvasLonePair: LonePair;
 		}
 	}
 
