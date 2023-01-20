@@ -108,6 +108,11 @@ provideFluentDesignSystem()
 const template = html<LewisStructureCanvas>`  
  
 <fluent-design-system-provider use-defaults>
+<style>
+.eventless{
+	pointer-events:none;
+}
+</style>
 	<div role="toolbar" ${ref("toolbarDiv")} style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 
 			<div style="display:flex;margin-right:5px;">
@@ -623,11 +628,12 @@ export class LewisStructureCanvas extends FASTElement {
 		// });
 
 
-		this.mainSVG.on('click', (ev) => {
-			let evt = ev as MouseEvent;
-			if (evt.defaultPrevented){
-				return;
-			}
+		// click is acting weird, can't prevent it with stopPropagation
+		this.mainSVG.mousedown((ev:MouseEvent) => {
+			// if (ev.defaultPrevented){
+			// 	return;
+			// }
+
 			// 	if (this.molecule == null){
 			// 		return;
 			// 	}
@@ -639,12 +645,13 @@ export class LewisStructureCanvas extends FASTElement {
 			// 		// console.log(ev.target)
 			// 		// console.log('window pointerdown no target');
 			// 		// let canvasCoords = _canvas.getPointer(ev);
+			console.log("CLICK FROM MAIN!");
 			if (this.molecule != null) {
 				const bounds =  this.mainSVG.node.getBoundingClientRect();
 				var vertex = new Vertex({
 					identity: settingsService.currentElement,
-					x: evt.clientX - bounds.left,
-					y: evt.clientY - bounds.top,
+					x: ev.clientX - bounds.left,
+					y: ev.clientY - bounds.top,
 					molecule: this.molecule,
 					svg: this.mainSVG
 				});
