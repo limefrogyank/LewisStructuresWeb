@@ -1,36 +1,32 @@
-//import { Kekule as k} from './kekule/dist/kekule.js';
-import {Kekule as k} from 'kekule';
-// import {Vertex} from './vertex';
-// import {Connector} from './connector';
-// import {LonePair} from './lonePair';
-
-declare global{
-	interface Window{
-		Kekule: Kekule;
-		
-	}
-} 
-
-
-export interface Kekule{
-	Molecule:Kekule.Molecule;
-	Atom:Kekule.Atom;
-	Bond:Kekule.Bond;
-	Element: Kekule.Element;
-	IO:Kekule.IO;
-	MolStandardizer:Kekule.MolStandardizer;
-	ObjComparer: Kekule.ObjComparer;
-	ChemMarker:ChemMarker;
-	BondStereo:Kekule.BondStereo;
-	OpenBabel: Kekule.OpenBabel;
-	ChemStructureSearcher: Kekule.ChemStructureSearcher;
-	Render:Kekule.Render;
-
+declare module Kekule {
 	
+export enum ComparisonMethod{
+	TEST,
+	TEST2,
+	TEST3
 }
 
 
-interface ChemMarker{
+
+// export interface Kekule{
+// 	Molecule:Kekule.Molecule;
+// 	Atom:Kekule.Atom;
+// 	Bond:Kekule.Bond;
+// 	Element: Kekule.Element;
+// 	IO:Kekule.IO;
+// 	MolStandardizer:Kekule.MolStandardizer;
+// 	ObjComparer: Kekule.ObjComparer;
+// 	ChemMarker:ChemMarker;
+// 	BondStereo:Kekule.BondStereo;
+// 	OpenBabel: Kekule.OpenBabel;
+// 	ChemStructureSearcher: Kekule.ChemStructureSearcher;
+// 	Render:Kekule.Render;
+
+	
+// }
+
+
+class ChemMarker{
 	Charge:Kekule.ChemMarker.Charge;
 	UnbondedElectronSet:Kekule.ChemMarker.UnbondedElectronSet;
 }
@@ -41,10 +37,10 @@ enum StructureComparationLevel{
 	CONFIGURATION=3,
 	EXACT=4,
 	DEFAULT=4
-};
+}
 
 
-export namespace Kekule{
+//export namespace Kekule{
 
 	export interface Render{
 		RaphaelRendererBridge: Render.RaphaelRendererBridge;
@@ -91,23 +87,23 @@ export namespace Kekule{
 		stereo?:boolean;
 	}
 
-	export interface IO{
-		loadFormatData(mimeData:string, format:string): Kekule.Molecule;
-		loadMimeData(mimeData:string, mimeType:string): Kekule.Molecule;
+	export class IO{
+		static loadFormatData(mimeData:string, format:string): Kekule.Molecule;
+		static loadMimeData(mimeData:string, mimeType:string): Kekule.Molecule;
 
-		saveFormatData(mol:Kekule.Molecule, format:string ):string;
-		saveMimeData(mol:Kekule.Molecule, mimeType:string ):string;
+		static saveFormatData(mol:Kekule.Molecule, format:string ):string;
+		static saveMimeData(mol:Kekule.Molecule, mimeType:string ):string;
 	}
 
-	export interface ObjComparer{
-		compare(obj1: Molecule, obj2:Molecule, option:any);
+	export class ObjComparer{
+		static compare(obj1: Molecule, obj2:Molecule, option:any);
 	}
 
-	export interface MolStandardizer{
-		standardize(molecule: Molecule, option: any):Molecule;
+	export class MolStandardizer{
+		static standardize(molecule: Molecule, option: any):Molecule;
 	}
 	
-	export interface ObjectEx{
+	export class ObjectEx{
 		addEventListener(eventName:string, listener:Function, thisArg:Object):Object;
 		addOnceEventListener(eventName:string, listener:Function, thisArg:Object) :Object;
 		afterInitialization();
@@ -118,8 +114,9 @@ export namespace Kekule{
 		on(eventName:string, listener:Function, thisArg:Object):Object;
 
 	}
-	export interface ChemObject extends ObjectEx{
-		new(id?:string);
+	
+	export class ChemObject extends ObjectEx{
+		constructor(id?:string);
 		id:string;
 		interactMode:number;
 		scalarAttribs:any[];
@@ -131,7 +128,8 @@ export namespace Kekule{
 		appendMarker(marker:ChemObject);
 		clearMarkers();
 		getMarkerCount():number;
-		getMarkersOfType<T>(classType: T, exactMatch?: boolean): T[];
+		
+		getMarkersOfType(classType: any, exactMatch?: boolean): any[];
 		removeMarker(marker:ChemObject);
 		removeMarkerAt(index:number);
 		replaceMarker(oldMarker:ChemObject,newMarker:ChemObject);
@@ -160,7 +158,7 @@ export namespace Kekule{
 		sourceToShadowMap:	any;	
 		shadowFragment:	Kekule.StructureFragment;	
 	}
-	export interface StructureFragment extends ChemStructureNode{
+	export class StructureFragment extends ChemStructureNode{
 		formula:	MolecularFormula;//	Formula of this container. Usually used for some simple structures (such as inorganic molecules). Formual can also be calculated from Kekule.StructureConnectionTable.
 		ctab:	StructureConnectionTable;	//Connection table of this container. Usually used for some complex structures (such as organic molecules).
 		nodes:	ChemStructureNode[];//	All structure nodes in this fragment.
@@ -182,8 +180,8 @@ export namespace Kekule{
 		search(mol2: StructureFragment, options:any) : any;
 	}
 
-	export interface Molecule extends StructureFragment{
-		new(id?:string,name?:string,withCtab?:boolean): Molecule;
+	export class Molecule extends StructureFragment{
+		constructor(id?:string,name?:string,withCtab?:boolean);
 		name:string;
 		appendNode(atom:Atom);
 		appendConnector(bond:Bond);
@@ -206,27 +204,27 @@ export namespace Kekule{
 		setName(name:string);
 		getInfo(b:boolean):any;
 	}
-	export interface BaseStructureNode extends ChemStructureObject{
+	export class BaseStructureNode extends ChemStructureObject{
 		id:string;
 		coord2D:Coordinates2D;
 		coord3D:Coordinates3D;
 		absCoord2D:Coordinates2D;
 		absCoord3D:Coordinates3D;
 		zIndex2D:number;
-		new(id:string, coord2D:Coordinates2D, coord3D:Coordinates3D):BaseStructureNode;
+		constructor(id:string, coord2D:Coordinates2D, coord3D:Coordinates3D);
 	}
 
-	export interface ChemStructureNode extends BaseStructureNode{
+	export class ChemStructureNode extends BaseStructureNode{
 		getLinkedBonds(bondType?: number) : Bond[];
 		getLinkedChemNodes(ignoreHydrogenAtoms?:boolean): ChemStructureNode[];
 		getLinkedDoubleBonds():Bond[];
 		getLinkedMultipleBonds():Bond[];
 	}
-	export interface AbstractAtom extends ChemStructureNode{
-		new(id:string, coord2D: Coordinates2D, coord3D: any):AbstractAtom;
+	export class AbstractAtom extends ChemStructureNode{
+		constructor(id:string, coord2D: Coordinates2D, coord3D: any);
 		explicityHydrogenCount:number;
 	}
-	export interface Atom extends AbstractAtom {
+	export class Atom extends AbstractAtom {
 		isotope:Isotope;
 		symbol:string;
         charge:number;
@@ -234,7 +232,7 @@ export namespace Kekule{
 		massNumber:number;
 		atomType:any;
 		hybridizationType:number;
-		new(id?:string,symbol?:string,massNumber?:number):Atom;
+		constructor(id?:string,symbol?:string,massNumber?:number);
 		setSymbol(element:string):Atom;
 		setCoord2D(coords:Coordinates2D):Atom;
 		setMassNumber(massNumber:number):Atom;
@@ -242,14 +240,14 @@ export namespace Kekule{
 
 		//canvasVertex: Vertex;
 	}
-	export interface Psuedoatom extends AbstractAtom {
+	export class Psuedoatom extends AbstractAtom {
 		
 	}
-	export interface VariableAtom extends AbstractAtom {
+	export class VariableAtom extends AbstractAtom {
 
 	}
-	export interface Element extends ChemObject {
-		new(symbolOrAtomicNumber: string|number):Element;
+	export class Element extends ChemObject {
+		constructor(symbolOrAtomicNumber: string|number);
 		readonly atomicNumber: number; //The atomic number of element. Read only.
 		readonly symbol: String; //	The symbol of element. Read only.
 		readonly name: String; //	Name of element. Read only.
@@ -267,7 +265,7 @@ export namespace Kekule{
 		readonly naturalAbundance:	number;//	Read only.
 		readonly isotopeAlias:	String;//	Alias of isotope (such as D for H2). Read only.
 	}
-	export interface ChemStructureObject extends ChemObject{
+	export class ChemStructureObject extends ChemObject{
 		appendConnectedObj(obj: ChemStructureObject);
 		appendLinkedConnector(connector:ChemStructureConnector);
 		assertConnectedObjLegal(obj:ChemStructureObject):boolean;
@@ -291,15 +289,15 @@ export namespace Kekule{
 
 
 	}
-	export interface BaseStructureConnector extends ChemStructureObject{
+	export class BaseStructureConnector extends ChemStructureObject{
 
 	}
-	export interface ChemStructureConnector extends BaseStructureConnector{
+	export class ChemStructureConnector extends BaseStructureConnector{
 
 		
 	}
-	export interface Bond extends ChemStructureConnector{
-		new(id?:string, connectedObjs?:ChemStructureObject[], bondOrder?:number, electronCount?:number, bondType?:string):Bond;
+	export class Bond extends ChemStructureConnector{
+		constructor(id?:string, connectedObjs?:ChemStructureObject[], bondOrder?:number, electronCount?:number, bondType?:string);
 		bondForm:	Kekule.BondForm;//	Form of bond, single, double or other.
 		bondType:	String;//	Type of bond, value from Kekule.BondType.
 		bondOrder:	number;//	Order of bond. Values should be retrieved from Kekule.BondOrder.
@@ -314,34 +312,34 @@ export namespace Kekule{
 		//canvasConnector: Connector;
 	}
 
-	export interface ElectronSet extends ChemObject{
-		new(electronCount?:number);
+	export class ElectronSet extends ChemObject{
+		constructor(electronCount?:number);
 		electronCount:number;
 	}
-	export interface BondForm extends ElectronSet {
-		new(bondOrder:number, electronCount?:number, bondType?:string):BondForm;
+	export class BondForm extends ElectronSet {
+		constructor(bondOrder:number, electronCount?:number, bondType?:string);
 		bondType:	String;//	Type of bond, a value from Kekule.BondType.
 		bondOrder:	number;//	Order of bond. Values should be retrieved from Kekule.BondOrder.
 		bondValence:	number;//	Valence comsumed of an atom to connect to this bond. Note this value is different from Kekule.BondForm#bondOrder, For example, bondOrder value for Kekule.BondOrder.EXPLICIT_AROMATIC is 10, but the valence is 1.5. This property is read only.
 	}
 
-	export namespace ChemMarker {
+	export module ChemMarker {
 		// BaseMarker:BaseMarker;
 		// ChemMarkerProperty:ChemMarkerProperty;
 		// Charge:Charge;
-		export interface BaseMarker extends ChemObject {
+		export class BaseMarker extends ChemObject {
 
 		}
 	
-		export interface ChemPropertyMarker extends BaseMarker{
+		export class ChemPropertyMarker extends BaseMarker{
 			value: any;
 		}
 	
-		export interface Charge extends ChemPropertyMarker{
+		export class Charge extends ChemPropertyMarker{
 	
 		}
 
-		export interface UnbondedElectronSet extends BaseMarker {
+		export class UnbondedElectronSet extends BaseMarker {
 	
 			coord2D:Coordinates2D; //hack... doesn't appear on any base classes, but appears in javascript...
 
@@ -349,11 +347,11 @@ export namespace Kekule{
 		}
 	}
 
-	export interface BondStereo  {
-		NONE: number,
-		UP:number,
-		UP_INVERTED:number,
-		DOWN:number
+	export enum BondStereo  {
+		NONE,
+		UP,
+		UP_INVERTED,
+		DOWN
 	}
 	
 	export type BondType = 'COVALENT'|'IONIC'|'COORDINATE'|'METALLIC'|'HYDROGEN';
@@ -365,13 +363,7 @@ export namespace Kekule{
 	export interface Coordinates3D extends Coordinates2D{
 		z:number;
 	}
+//}
+
+
 }
-
-
-
-export const Kekule : Kekule = k;
-
-
-
-console.log(Kekule);
-(window as any).Kekule = Kekule;

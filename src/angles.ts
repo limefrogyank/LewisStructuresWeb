@@ -1,5 +1,3 @@
-import { Kekule } from "./kekuleTypings";
-
 export function getAverageBondLength(centerAtom: Kekule.Atom, connectedAtoms: Kekule.Atom[]){
     let average = connectedAtoms.reduce((p,v)=>{
         let len = Math.sqrt(Math.pow(v.coord2D.x - centerAtom.coord2D.x, 2) + Math.pow(v.coord2D.y - centerAtom.coord2D.y, 2));

@@ -1,5 +1,4 @@
 import { OpenBabelModule } from './lewisStructureCanvas';
-import {Kekule} from './kekuleTypings';
 
 function obBaseToKekule(ob: OpenBabelModule, obBase:OpenBabelModule.OBMol, kMol:Kekule.Molecule){
     var result = kMol || new Kekule.Molecule();

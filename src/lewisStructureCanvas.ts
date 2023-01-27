@@ -4,7 +4,7 @@ import { PeriodicTableModal } from './periodicTableModal';
 import { Vertex } from './vertex';
 import { InteractionMode, SettingsService, BondType } from './service/settingsService';
 import { provideFluentDesignSystem, fluentButton, fluentTextField, fluentDialog, fluentMenu, fluentMenuItem } from '@fluentui/web-components';
-import { Kekule } from './kekuleTypings';
+//import { Kekule } from './kekuleTypings';
 //import * as k from './kekule/dist/kekule.min.js';
 import * as obm from './kekule/dist/extra/openbabel.js';
 //import { Connector } from './connector';
@@ -22,6 +22,9 @@ import './openbabel.js'
 import { Connector } from './connector';
 import { Position } from './interfaces';
 import { LonePair } from './lonePair';
+import {Kekule as k} from 'kekule';
+
+k; //loads kekule stuff, prevents tree-shaking.
 
 declare global {
 	interface Window {
@@ -637,6 +640,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 		for (const [atom, vertex] of verteces) {
 
+			//console.log('getMarkersOfType error?');
 			let electronSets = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet, false);
 			console.log(electronSets);
 			for (let m = 0; m < electronSets.length; m++) {

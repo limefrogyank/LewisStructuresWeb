@@ -3,7 +3,6 @@ import { Vertex, IVertexOptions } from "./vertex";
 import { settingsService } from './lewisStructureCanvas';
 import { BondType } from './service/settingsService';
 import { Subscription, Observable, BehaviorSubject, Subject, combineLatest, observable } from "rxjs";
-import { Kekule } from './kekuleTypings';
 import { SVG, Line as SvgLine, Defs as SvgDefs, Pattern as SvgPattern, Polygon as SvgPolygon, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Svg, Text as SvgText, Element, Shape } from '@svgdotjs/svg.js';
 import { Position, Position as Vector2 } from "./interfaces";
 import { isNullOrWhiteSpace } from "@microsoft/fast-web-utilities";

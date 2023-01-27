@@ -4,7 +4,6 @@ import { settingsService } from './lewisStructureCanvas';
 import { Vertex } from './vertex';
 import { InteractionMode } from './service/settingsService';
 //import { SettingsService} from './service/settingsService';
-import { Kekule } from './kekuleTypings';
 import { SVG, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element }
 	from '@svgdotjs/svg.js';
 import { Position } from './interfaces';

@@ -6,7 +6,6 @@ import { settingsService } from './lewisStructureCanvas';
 //import { LonePair } from './lonePair';
 import { InteractionMode, BondType } from './service/settingsService';
 import { Range } from './rangeRadians';
-import { Kekule } from './kekuleTypings';
 import { SVG, ForeignObject as SvgForeignObject, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element } from '@svgdotjs/svg.js';
 import { Position } from './interfaces';
 import { LonePair } from './lonePair';
@@ -304,7 +303,8 @@ export class Vertex {
 		this._ariaLabel = selfElement.name.toString() + ' atom ';
 		let nodes = this.atom.getLinkedChemNodes();
 		let bonds = this.atom.getLinkedBonds();
-		let lps = this.atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet, false);
+		// console.log('getMarkersOfType error?');
+		let lps : Kekule.ChemMarker.UnbondedElectronSet[] = this.atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet, false);
 
 		if (lps.length > 0) {
 			this._ariaLabel += "with " + lps.length + " lone pair" + (lps.length > 1 ? "s" : "") + " of electrons ";

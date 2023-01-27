@@ -1,5 +1,4 @@
 import { generateOctahedralVectors, generateTerminalTetrahedralVectors, generateTrigonalBypyramidalVectors, getAverageBondLength, getBondAngle, getTetrahedralVectors, getTrigonalPlanarVectors } from "./angles";
-import { Kekule } from "./kekuleTypings";
 
 function shiftAndScale(atom:Kekule.Atom, vector:{x:number,y:number}, length:number): {x:number, y:number}{
     return {x: atom.coord2D.x + vector.x * length, y:-vector.y* length + atom.coord2D.y};
@@ -73,6 +72,7 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, useFlat:boolean=
         let bonds = centerAtom.getLinkedBonds();
         let linkedCentralAtoms = linked.filter(x=> centerAtoms.includes(x));
         let terminalAtoms = linked.filter(x=> !centerAtoms.includes(x));
+        console.log('getMarkersOfType error?');
         let lonepairs = centerAtoms[i].getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet,false);
         let length = getAverageBondLength(centerAtom,linked);
         
