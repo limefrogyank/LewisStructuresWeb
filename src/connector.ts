@@ -4,8 +4,8 @@ import { settingsService } from './lewisStructureCanvas';
 import { BondType } from './service/settingsService';
 import { Subscription, Observable, BehaviorSubject, Subject, combineLatest, observable } from "rxjs";
 import { Kekule } from './kekuleTypings';
-import { SVG, Line as SvgLine, Defs as SvgDefs, Pattern as SvgPattern, Polygon as SvgPolygon, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Svg, Text as SvgText, Element } from '@svgdotjs/svg.js';
-import { Position as Vector2 } from "./interfaces";
+import { SVG, Line as SvgLine, Defs as SvgDefs, Pattern as SvgPattern, Polygon as SvgPolygon, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Svg, Text as SvgText, Element, Shape } from '@svgdotjs/svg.js';
+import { Position, Position as Vector2 } from "./interfaces";
 import { isNullOrWhiteSpace } from "@microsoft/fast-web-utilities";
 
 interface IConnectorOptions {
@@ -31,6 +31,8 @@ export class Connector {
 	_line3: SvgLine | null;
 	_polygon: SvgPolygon | null;
 	_pattern: SvgPattern;
+	_div: Element;
+	_foreignObject: SvgForeignObject;
 
 	//_bondType:BondType;
 	_vertex1: Vertex;
@@ -46,14 +48,15 @@ export class Connector {
 	_molecule: Kekule.Molecule;
 	public bond: Kekule.Bond;
 
-	private _bondType: BehaviorSubject<BondType>;
+	_bondType: BehaviorSubject<BondType>;
 	public BondType: Observable<BondType>;
+	private _runner: import("@svgdotjs/svg.js").Runner;
 	public get CurrentBondType() {
 		return this._bondType?.value;
 	}
 
-	private _vertexChange: Subject<Vertex>;
-	public VertexChange: Observable<Vertex>;
+	_vertexChange: Subject<Vertex>;
+	public VertexChange$: Observable<Vertex>;
 
 	// public get bondType(): BondType{
 	// 	return this._bondType;
@@ -79,7 +82,7 @@ export class Connector {
 
 		// THIS IS NOT NECESSARY RIGHT NOW. ONLY FOR ARIA LABEL CHANGES ON PREVIOUS VERSION.
 		this._vertexChange = new Subject();
-		this.VertexChange = this._vertexChange.asObservable();
+		this.VertexChange$ = this._vertexChange.asObservable();
 
 		//this._bondType=options.bondType;
 		this._vertex1 = options.vertex1;
@@ -130,118 +133,79 @@ export class Connector {
 		//let angle = Math.atan2(linePoints.y2-linePoints.y1, linePoints.x2-linePoints.x1);
 
 		this._svg = options.svg;
-		this._group = this._svg.group().cx(0).cy(0);//.transform({translateX: options.v})
-		//this._defs = this._group.defs();
-		this._line1 = this._group.line(this._vertex1.Position.x, this._vertex1.Position.y, this._vertex2.Position.x, this._vertex2.Position.y).stroke("#000000");
+		this._group = this._svg.group().cx(0).cy(0).attr("tabindex","0").attr("aria-label", "Bond");;//.transform({translateX: options.v})
 
+		this._selectableCircle = this._group.ellipse()
+			.attr({ 'fill-opacity': 0.0, fill:'darkred'})
+			.stroke({ color: 'darkred', width: 1, opacity: 0 })
+			.filterWith((add) => {
+				add.gaussianBlur(2, 2);
+			});;
+		this.adjustSelectableCircle();
 
-		this._selectableCircle = this._group.ellipse();
+		this._line1 = this._group.line(this._vertex1.Position.x, this._vertex1.Position.y, this._vertex2.Position.x, this._vertex2.Position.y)
+			.stroke("#000000").attr("pointer-events", "none");
+
 
 		combineLatest([this._vertex1.Position$, this._vertex2.Position$]).subscribe(endpoints => {
 			this.moveLine(endpoints);
+			this.adjustSelectableCircle();
 			this._lastEndpoints = endpoints;
 		});
-		// {
-		// 	rx: distance/3,
-		// 	ry: 10,
-		// 	left: center.x,
-		// 	top: center.y,
-		// 	centeredRotation:true,
-		// 	angle:angle * 360 / 2 / Math.PI,
-		// 	originX:'center',
-		// 	originY:'center',
-		// 	fill:'transparent',
-		// 	stroke:'black',
-		// 	opacity:0,
-		// 	strokeWidth:2,
-		// 	strokeDashArray: [5,5],
-		// 	selectable:false,
-		// 	hasControls:false,
-		// 	evented:false,
-		// 	hoverCursor:'null'
-		// });
+
 
 		//this.on('added', ev =>{
 
 		//this.canvas?.add(this._selectableCircle);
-		//this._selectableCircle.on('mouseover', this.mouseOverObject.bind(this));
-		//this._selectableCircle.on('mouseout', this.mouseOutObject.bind(this));
+		this._selectableCircle.mouseover(this.mouseOverObject.bind(this));
+		this._selectableCircle.mouseout(this.mouseOutObject.bind(this));
 		//this._selectableCircle.bringToFront();
-		//this._selectableCircle.on('mousedown', this.mouseDown.bind(this));
+		this._selectableCircle.mousedown(this.mouseDown.bind(this));
 
 
-		//});
-		// this.on('removed', ev =>{
-		// 	console.log('removed connector');
-		// 	this.canvas?.remove(this._selectableCircle);
-		// });
 		this._vertex1 = options.vertex1;
 		this._vertex2 = options.vertex2;
 
-
-		// if (options.vertex1 !== null) {
 		this._vertex1SymbolSubscription = options.vertex1.Symbol$.subscribe(symbol => {
 			this._vertexChange.next(options.vertex1);
 		});
 
 		this._vertex1PositionSubscription = options.vertex1.Position$.subscribe(point => {
 			this._vertexChange.next(options.vertex1);
-			// (this as fabric.Line).set({
-			// 	x1: point.x,
-			// 	y1: point.y,
-			// 	dirty:true
-			// });
-			// let center = this.getCenterPoint();
-			// let linePoints = this.calcLinePoints();
-			// let distance = Math.sqrt(Math.pow(linePoints.x2 - linePoints.x1,2) + Math.pow(linePoints.y2-linePoints.y1,2));
-			// let angle = Math.atan2(linePoints.y2-linePoints.y1, linePoints.x2-linePoints.x1);
-
-			// this._selectableCircle.set({
-			// 	left:center.x,
-			// 	top:center.y,
-			// 	rx: distance/3,
-			// 	angle:angle * 360 / 2 / Math.PI,
-			// 	dirty:true
-			// });
-			// this.setCoords();
-			// this._selectableCircle.setCoords();
-			// if (this.canvas !== undefined) {
-			// 	this.canvas.renderAll();
-			// }
 		});
-		// }
-		// if (options.vertex2 !== null){
+
 		this._vertex2SymbolSubscription = options.vertex2.Symbol$.subscribe(symbol => {
 			this._vertexChange.next(options.vertex2);
 		});
 
 		this._vertex2PositionSubscription = options.vertex2.Position$.subscribe(point => {
 			this._vertexChange.next(options.vertex2);
-			// (this as fabric.Line).set({
-			// 	x2: point.x,
-			// 	y2: point.y,
-			// 	dirty:true
-			// });
-			// let center = this.getCenterPoint();
-			// let linePoints = this.calcLinePoints();
-			// let distance = Math.sqrt(Math.pow(linePoints.x2 - linePoints.x1,2) + Math.pow(linePoints.y2-linePoints.y1,2));
-			// let angle = Math.atan2(linePoints.y2-linePoints.y1, linePoints.x2-linePoints.x1);
-
-			// //console.log('center coords: ' + center);
-			// this._selectableCircle.set({
-			// 	left:center.x,
-			// 	top:center.y,
-			// 	rx: distance/3,
-			// 	angle:angle * 360 / 2 / Math.PI,
-			// 	dirty:true
-			// });
-			// this.setCoords();
-			// this._selectableCircle.setCoords();
-			// if (this.canvas !== undefined) {
-			// 	this.canvas.renderAll();
-			// }
 		});
-		// }
+	}
+
+	public getAngleFrom(from:Vertex){
+		let to: Vertex;
+		if (this._vertex1 == from){
+			to = this._vertex2;
+		} else if (this._vertex2 == from){
+			to = this._vertex1;
+		} else {
+			// vertex is not part of this connector
+			return 0;
+		}
+		return Math.atan2(to.Position.y - from.Position.y, to.Position.x - from.Position.x);
+	}
+
+	private adjustSelectableCircle(){
+		const v1p = this._vertex1.Position;
+		const v2p = this._vertex2.Position;
+		let distance = Math.sqrt(Math.pow(v2p.x - v1p.x,2) + Math.pow(v2p.y-v1p.y,2));
+		let angle = Math.atan2(v2p.y-v1p.y,v2p.x-v1p.x);
+		let center :Position= {x:(v2p.x + v1p.x)/2, y:(v2p.y + v1p.y)/2};
+
+		distance = (distance > (2*Vertex.circleRadius) ? distance-(2*Vertex.circleRadius) : distance*2/3);
+		this._selectableCircle.width(distance).height(14).cx(center.x).cy(center.y);
+		this._selectableCircle.untransform().rotate(angle*360/2/Math.PI);
 	}
 
 	// this will move line to new coords.  If coords omitted, will "redraw" line with current bondtype and same position.
@@ -271,7 +235,7 @@ export class Connector {
 					this._line3 = null;
 				}
 				if (this._line1 == null) {
-					this._line1 = this._group.line(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y);
+					this._line1 = this._group.line(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y).attr("pointer-events", "none");
 				} else {
 					this._line1.plot(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y);
 				}
@@ -284,7 +248,7 @@ export class Connector {
 						endpoints[0].x + perpVector.x,
 						endpoints[0].y + perpVector.y,
 						endpoints[1].x + perpVector.x,
-						endpoints[1].y + perpVector.y);
+						endpoints[1].y + perpVector.y).attr("pointer-events", "none");;
 				} else {
 					this._line1.plot(
 						endpoints[0].x + perpVector.x,
@@ -298,7 +262,7 @@ export class Connector {
 						endpoints[0].x - perpVector.x,
 						endpoints[0].y - perpVector.y,
 						endpoints[1].x - perpVector.x,
-						endpoints[1].y - perpVector.y);
+						endpoints[1].y - perpVector.y).attr("pointer-events", "none");;
 				} else {
 					this._line2.plot(
 						endpoints[0].x - perpVector.x,
@@ -326,7 +290,7 @@ export class Connector {
 						endpoints[0].x - perpVector.x,
 						endpoints[0].y - perpVector.y,
 						endpoints[1].x - perpVector.x,
-						endpoints[1].y - perpVector.y);
+						endpoints[1].y - perpVector.y).attr("pointer-events", "none");;
 				} else {
 					this._line2.plot(
 						endpoints[0].x - perpVector.x,
@@ -341,7 +305,7 @@ export class Connector {
 						endpoints[0].x + perpVector.x,
 						endpoints[0].y + perpVector.y,
 						endpoints[1].x + perpVector.x,
-						endpoints[1].y + perpVector.y);
+						endpoints[1].y + perpVector.y).attr("pointer-events", "none");;
 				} else {
 					this._line3.plot(
 						endpoints[0].x + perpVector.x,
@@ -380,9 +344,10 @@ export class Connector {
 				}
 				if (this._polygon == null) {
 					this._polygon = this._group.polygon(`
-					${endpoints[0].x + (normVector.x * normLength)},${endpoints[0].y + (normVector.y * normLength)}, 
-					${endpoints[1].x - (normVector.x * normLength) + perpVector.x},${endpoints[1].y - (normVector.y * normLength) + perpVector.y},
-					${endpoints[1].x - (normVector.x * normLength) - perpVector.x},${endpoints[1].y - (normVector.y * normLength) - perpVector.y}`);
+						${endpoints[0].x + (normVector.x * normLength)},${endpoints[0].y + (normVector.y * normLength)}, 
+						${endpoints[1].x - (normVector.x * normLength) + perpVector.x},${endpoints[1].y - (normVector.y * normLength) + perpVector.y},
+						${endpoints[1].x - (normVector.x * normLength) - perpVector.x},${endpoints[1].y - (normVector.y * normLength) - perpVector.y}`)
+						.attr("pointer-events", "none");
 
 				} else {
 					this._polygon.plot(`
@@ -408,9 +373,10 @@ export class Connector {
 				}
 				if (this._polygon == null) {
 					this._polygon = this._group.polygon(`
-					${endpoints[0].x + (normVector.x * normLength)},${endpoints[0].y + (normVector.y * normLength)}, 
-					${endpoints[1].x - (normVector.x * normLength) + perpVector.x},${endpoints[1].y - (normVector.y * normLength) + perpVector.y},
-					${endpoints[1].x - (normVector.x * normLength) - perpVector.x},${endpoints[1].y - (normVector.y * normLength) - perpVector.y}`);
+						${endpoints[0].x + (normVector.x * normLength)},${endpoints[0].y + (normVector.y * normLength)}, 
+						${endpoints[1].x - (normVector.x * normLength) + perpVector.x},${endpoints[1].y - (normVector.y * normLength) + perpVector.y},
+						${endpoints[1].x - (normVector.x * normLength) - perpVector.x},${endpoints[1].y - (normVector.y * normLength) - perpVector.y}`)
+						.attr("pointer-events", "none");
 
 				} else {
 					this._polygon.plot(`
@@ -423,6 +389,16 @@ export class Connector {
 				break;
 
 		}
+		let bboxElement : Shape|null = this._line1;
+		if (this._line1 == null && this._polygon != null){
+			bboxElement = this._polygon;
+		} 
+		if (bboxElement == null){
+			return;
+		}
+		// const bbox = bboxElement.bbox();
+		//this._foreignObject.size(bbox.width, bbox.height).cx(bbox.cx).cy(bbox.cy);
+
 	}
 
 
@@ -441,13 +417,15 @@ export class Connector {
 	}
 
 	public dispose() {
+		this._molecule.removeConnector(this.bond);
+		this._vertex1?.removeAttachment(this);
+		this._vertex2?.removeAttachment(this);
 		this._line1?.remove();
 		this._line2?.remove();
 		this._line3?.remove();
 		this._polygon?.remove();
 		this._pattern?.remove();
 		this._group?.remove();
-		this._molecule.removeConnector(this.bond);
 		this._vertex1PositionSubscription.unsubscribe();
 		this._vertex2PositionSubscription.unsubscribe();
 		this._vertex1SymbolSubscription.unsubscribe();
@@ -456,40 +434,33 @@ export class Connector {
 		// this._vertex2=null;
 	}
 
-	public setEvented(isEvented: boolean) {
-		console.log("set evented on selectableCircle");
-		// this._selectableCircle.set({
-		// 	evented: isEvented
-		// });
-	}
-
-	// mouseDown(ev:fabric.IEvent){
-	// 	console.log("mousedown!");
-
-	// 	if (settingsService.isEraseMode){
-	// 		this._vertex1?.removeAttachment(this);
-	// 		this._vertex2?.removeAttachment(this);
-	// 		//this._vertex1.dispose();
-	// 		//this._vertex2.dispose();
-	// 		//this._vertex1Subscription.unsubscribe();
-	// 		//this._vertex2Subscription.unsubscribe();
-	// 		//this.canvas.remove(this);
-	// 		this.dispose();
-	// 	} else if (settingsService.isDrawMode){
-	// 		// change bond order
-	// 		if (settingsService.currentBondType === BondType.lonePair){
-	// 			// don't change a bond into a lone pair.
-	// 			return;
-	// 		}
-	// 		if (this._bondType.value !== settingsService.currentBondType){
-	// 			this._bondType.next(settingsService.currentBondType);
-	// 			//this._bondType = settingsService.currentBondType;
-	// 			(this as fabric.Line).set({dirty:true});
-	// 			this.canvas?.renderAll();
-	// 		}
-
-	// 	}
+	// public setEvented(isEvented: boolean) {
+	// 	console.log("set evented on selectableCircle");
+	// 	// this._selectableCircle.set({
+	// 	// 	evented: isEvented
+	// 	// });
 	// }
+
+	mouseDown(ev:MouseEvent){
+		console.log("mousedown on connector!");
+		ev.stopPropagation();
+		if (settingsService.isEraseMode){
+			this.dispose();
+		} else if (settingsService.isDrawMode){
+			// change bond order
+			if (settingsService.currentBondType === BondType.lonePair){
+				// don't change a bond into a lone pair.
+				return;
+			}
+			if (this._bondType.value !== settingsService.currentBondType){
+				this._bondType.next(settingsService.currentBondType);
+				this.moveLine(); // just a way to redraw the line
+				//this._bondType = settingsService.currentBondType;
+				
+			}
+
+		}
+	}
 
 	// toSVG(reviver?: Function): string {
 	// 	let p = this.calcLinePoints();
@@ -517,129 +488,19 @@ export class Connector {
 	// }
 
 
-	// public _render(ctx:CanvasRenderingContext2D){
-	// 	let p = this.calcLinePoints();
-	// 	let vector = new fabric.Point(p.x2-p.x1, p.y2-p.y1);
-	// 	let length = Math.sqrt(Math.pow(vector.x,2) + Math.pow(vector.y,2));
-	// 	let normVector = new fabric.Point(vector.x/length, vector.y/length);
-	// 	let perpVector = new fabric.Point(normVector.y, -normVector.x);
+	mouseOverObject(ev:MouseEvent){
+		if (this._runner != null){
+			this._runner.finish();
+		}
+		this._runner = this._selectableCircle.animate().attr('fill-opacity','0.5');
+	}
 
-
-	// 	switch (this._bondType.value){
-	// 		case BondType.single:
-	// 			super._render(ctx);
-	// 			break;
-	// 		case BondType.double:
-	// 			perpVector = new fabric.Point(perpVector.x * 4, perpVector.y * 4);
-	// 			ctx.beginPath();
-	// 			ctx.moveTo(p.x1 + (normVector.x * 15) + perpVector.x, p.y1 + (normVector.y * 15) + perpVector.y);
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) + perpVector.x, p.y2 - (normVector.y * 15) + perpVector.y);
-	// 			ctx.closePath();
-	// 			ctx.lineWidth = this.strokeWidth != null ? this.strokeWidth : 0;
-	// 			ctx.strokeStyle = 'black';
-	// 			ctx.stroke();
-	// 			ctx.beginPath();
-	// 			ctx.moveTo(p.x1 + (normVector.x * 15) - perpVector.x, p.y1 + (normVector.y * 15) - perpVector.y);
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) - perpVector.x, p.y2 - (normVector.y * 15) - perpVector.y);
-	// 			ctx.closePath();
-	// 			ctx.lineWidth = this.strokeWidth != null ? this.strokeWidth : 0;
-	// 			ctx.strokeStyle = 'black';
-	// 			ctx.stroke();
-	// 			break;
-	// 		case BondType.triple:
-	// 			perpVector = new fabric.Point(perpVector.x * 6, perpVector.y * 6);
-	// 			ctx.beginPath();
-	// 			ctx.moveTo(p.x1 + (normVector.x * 15) + perpVector.x, p.y1 + (normVector.y * 15) + perpVector.y);
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) + perpVector.x, p.y2 - (normVector.y * 15) + perpVector.y);
-	// 			ctx.closePath();
-	// 			ctx.lineWidth = this.strokeWidth != null ? this.strokeWidth : 0;
-	// 			ctx.strokeStyle = 'black';
-	// 			ctx.stroke();
-	// 			ctx.beginPath();
-	// 			ctx.moveTo(p.x1 + (normVector.x * 15) - perpVector.x, p.y1 + (normVector.y * 15) - perpVector.y);
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) - perpVector.x, p.y2 - (normVector.y * 15) - perpVector.y);
-	// 			ctx.closePath();
-	// 			ctx.lineWidth = this.strokeWidth != null ? this.strokeWidth : 0;
-	// 			ctx.strokeStyle = 'black';
-	// 			ctx.stroke();
-	// 			super._render(ctx);
-	// 			break;
-	// 		case BondType.lonePair:
-	// 			//no bond
-	// 			break;
-	// 		case BondType.solid:
-	// 			perpVector = new fabric.Point(perpVector.x * 6, perpVector.y * 6);
-	// 			ctx.beginPath();
-	// 			ctx.moveTo(p.x1 + (normVector.x * 15), p.y1 + (normVector.y * 15));
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) + perpVector.x, p.y2 - (normVector.y * 15) + perpVector.y);
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) - perpVector.x, p.y2 - (normVector.y * 15) - perpVector.y);
-	// 			ctx.closePath();
-	// 			ctx.fillStyle = 'black';
-	// 			ctx.fill();
-
-	// 			break;	
-	// 		case BondType.dashed:
-	// 			perpVector = new fabric.Point(perpVector.x * 6, perpVector.y * 6);
-	// 			ctx.beginPath();
-	// 			ctx.moveTo(p.x1 + (normVector.x * 15), p.y1 + (normVector.y * 15));
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) + perpVector.x, p.y2 - (normVector.y * 15) + perpVector.y);
-	// 			ctx.lineTo(p.x2 - (normVector.x * 15) - perpVector.x, p.y2 - (normVector.y * 15) - perpVector.y);
-	// 			ctx.closePath();
-	// 			let gradient = ctx.createLinearGradient(p.x2 - (normVector.x * 15), p.y2 - (normVector.y * 15),p.x1 + (normVector.x * 15), p.y1 + (normVector.y * 15));
-	// 			gradient.addColorStop(0, 'black');
-	// 			gradient.addColorStop(0.1, 'black');
-	// 			gradient.addColorStop(0.1, 'white');
-	// 			gradient.addColorStop(0.2, 'white');
-	// 			gradient.addColorStop(0.2, 'black');
-	// 			gradient.addColorStop(0.3, 'black');
-	// 			gradient.addColorStop(0.3, 'white');
-	// 			gradient.addColorStop(0.4, 'white');
-	// 			gradient.addColorStop(0.4, 'black');
-	// 			gradient.addColorStop(0.5, 'black');
-	// 			gradient.addColorStop(0.5, 'white');
-	// 			gradient.addColorStop(0.6, 'white');
-	// 			gradient.addColorStop(0.6, 'black');
-	// 			gradient.addColorStop(0.7, 'black');
-	// 			gradient.addColorStop(0.7, 'white');
-	// 			gradient.addColorStop(0.8, 'white');
-	// 			gradient.addColorStop(0.8, 'black');
-	// 			gradient.addColorStop(0.9, 'black');
-	// 			gradient.addColorStop(0.9, 'white');
-	// 			gradient.addColorStop(1, 'white');
-	// 			ctx.fillStyle = gradient
-	// 			ctx.fill();
-
-	// 			break;
-	// 		default:
-	// 			super._render(ctx);
-	// 			break;
-	// 	}
-	// }
-
-	// mouseOverObject(ev:fabric.IEvent){
-
-	// 	console.log('mouse over connector');
-	// 	// this.canvas.add(this._ellipse);
-	// 	// this._ellipse.sendToBack();
-	// 	let canvas = this.canvas;
-	// 	this._selectableCircle.animate('opacity',1, {
-	// 		from:0,
-	// 		duration:100,
-	// 		onChange: canvas?.renderAll.bind(canvas)
-	// 	});
-
-	// }
-
-	// mouseOutObject(ev:fabric.IEvent){
-
-	// 	this._selectableCircle.animate('opacity',0, {
-	// 		from:1,
-	// 		duration:100,
-	// 		onChange: this.canvas?.renderAll.bind(this.canvas)
-
-	// 	});
-
-	// } 
+	mouseOutObject(ev:MouseEvent){
+		if (this._runner != null){
+			this._runner.finish();
+		}
+		this._runner = this._selectableCircle.animate().attr('fill-opacity','0');//, {
+	} 
 }
 
 

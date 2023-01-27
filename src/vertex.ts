@@ -9,6 +9,7 @@ import { Range } from './rangeRadians';
 import { Kekule } from './kekuleTypings';
 import { SVG, ForeignObject as SvgForeignObject, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element } from '@svgdotjs/svg.js';
 import { Position } from './interfaces';
+import { LonePair } from './lonePair';
 
 
 export interface IVertexOptions {
@@ -42,7 +43,7 @@ export class Vertex {
 
 	private _tempLine: Connector | null;
 	private _tempVertex: Vertex | null;
-	//private _tempLP: LonePair;
+	private _tempLP: LonePair;
 
 	public disableEvents: boolean = false;
 	private _hasMoved: boolean;
@@ -51,7 +52,9 @@ export class Vertex {
 
 	private _position$: BehaviorSubject<Position>;
 	public Position$: Observable<Position>;
-	public Position: Position;
+	get Position(): Position {
+		return this._position$.value;
+	}
 
 	private _symbol$: BehaviorSubject<string>;
 	public Symbol$: Observable<string>;
@@ -70,7 +73,7 @@ export class Vertex {
 	constructor(options: IVertexOptions) {
 
 		this._svg = options.svg;
-		this._group = options.svg.group();
+		this._group = options.svg.group().attr("tabindex", "0").attr("aria-label", "Atom");
 		this._group.translate(options.x, options.y);
 		//this._group.draggable();
 		this._group.on('dragmove.namespace', (e: any) => {
@@ -78,8 +81,8 @@ export class Vertex {
 			e.preventDefault();
 			this._group.translate((box.x2 + box.x) / 2, (box.y2 + box.y) / 2);
 		});
-		this._div = SVG('<div tabindex="0" aria-label="TESTING" style="background:transparent;width:100%;height:100%;opacity:0;">' + options.identity + '.</div>');
-		this._foreignObject = this._group.foreignObject(Vertex.circleRadius * 2, Vertex.circleRadius * 2).cx(0).cy(0).add(this._div);
+		// this._div = SVG('<div tabindex="0" aria-label="TESTING" style="background:transparent;width:100%;height:100%;opacity:0;">' + options.identity + '.</div>');
+		// this._foreignObject = this._group.foreignObject(Vertex.circleRadius * 2, Vertex.circleRadius * 2).cx(0).cy(0).add(this._div);
 		// this._div.node.textContent = "CHANGED it!"
 
 
@@ -88,7 +91,7 @@ export class Vertex {
 		this._circle.cx(0).cy(0);
 		//this._circle.move(-Vertex.circleRadius, -Vertex.circleRadius);
 		this._circle.fill({ color: '#ffffff', opacity: 1 });
-		this._circle.stroke({ color: '#000000', width: 1, dasharray: '5 5', opacity: 0 });
+		this._circle.stroke({ color: 'darkred', width: 1, dasharray: '5 5', opacity: 0 });
 
 		this._text = this._group.text(options.identity !== undefined ? options.identity : "");
 		this._text.font({ size: 20 });
@@ -103,7 +106,7 @@ export class Vertex {
 
 		this._position$ = new BehaviorSubject<Position>({ x: options.x, y: options.y });
 		this.Position$ = this._position$.asObservable();
-		this.Position = this._position$.value;
+		//this.Position = this._position$.value;
 
 		this._symbol$ = new BehaviorSubject<string>(options.identity!);
 		this.Symbol$ = this._symbol$.asObservable();
@@ -146,7 +149,7 @@ export class Vertex {
 
 		this._symbol$.subscribe(x => {
 			this.atom.setSymbol(x);
-			this.updateAriaLabel();
+			//this.updateAriaLabel();
 		});
 
 		this.attachments = [];
@@ -395,29 +398,30 @@ export class Vertex {
 			}
 
 			if (settingsService.currentBondType == BondType.lonePair) {
-				// 			// check if lone pair already exists... draw the lone pair starting at a slightly different angle 
-				// 			// so the first one is not hidden
-				// 			let angles: number[] = [];
-				// 			for (let i=0; i<this.attachments.length; i++){
-				// 				if (this.attachments[i] instanceof LonePair){
-				// 					let lonePair = this.attachments[i] as LonePair;
-				// 					angles.push(lonePair.angle!/360*Math.PI*2);
-				// 				}
-				// 			}
-				// 			let newAngle = this.findNewAngle(angles);
+				// check if lone pair already exists... draw the lone pair starting at a slightly different angle 
+				// so the first one is not hidden
+				let angles: number[] = [];
+				for (let i = 0; i < this.attachments.length; i++) {
+					if (this.attachments[i] instanceof LonePair) {
+						let lonePair = this.attachments[i] as LonePair;
+						angles.push(lonePair.radians);
+					} else {
+						// it's a connector, find the attached angle
+						let connector = this.attachments[i] as Connector;
+						let angle = connector.getAngleFrom(this);
+						angles.push(angle);
+					}
+				}
+				let newAngle = this.findNewAngle(angles);
 
-				// 			this._tempLP = new LonePair({
-				// 				left:center.x + (Math.cos(newAngle)*( LonePair.shortRadius + this._circle.radius!)),
-				// 				top:center.y + (Math.sin(newAngle)*(LonePair.shortRadius + this._circle.radius!)),
-				// 				angle:newAngle/(Math.PI*2)*360,
-				// 				owner:this,
-				// 				evented:true,
-				// 				molecule: this._molecule
-				// 			});
+				this._tempLP = new LonePair({
+					radians: newAngle,
+					owner: this,
+					molecule: this._molecule,
+					svg: this._svg
+				});
 
-				// 			this.attachments.push(this._tempLP);
-				// 			this.canvas?.add(this._tempLP);
-
+				this.attachments.push(this._tempLP);
 
 			} else {
 
@@ -474,19 +478,8 @@ export class Vertex {
 		// 	this.canvas?.off('mouse:up', this._mouseUpEventRef);
 
 		if (settingsService.currentBondType == BondType.lonePair) {
-			// 		// let vertexCenter = this._tempLP.owner.getCenterPoint();
-			// 		// let currentPoint = this.canvas.getPointer(ev);
-			// 		// let vect = new fabric.Point(currentPoint.x-vertexCenter.x,currentPoint.y-vertexCenter.x);
-			// 		// let angle = Math.atan2(vect.y, vect.x);
-			// 		// let length = Math.sqrt(Math.pow(vect.x,2) + Math.pow(vect.y,2));
-			// 		// let normVect = new fabric.Point(vect.x/length, vect.y/length);
-
-			// 		// this._tempLP.set({
-			// 		// 	angle:angle,
-			// 		// 	left: normVect.x * (this._tempLP.rx + this._circle.radius),
-			// 		// 	top: normVect.y * (this._tempLP.rx + this._circle.radius)
-			// 		// });
-			// 		this.updateAriaLabel();
+				
+				// this.updateAriaLabel();
 
 		} else {
 
@@ -542,7 +535,7 @@ export class Vertex {
 						}
 					}
 					if (!connectorExists) {
-						if (settingsService.hoveredVertex == null){
+						if (settingsService.hoveredVertex == null) {
 							throw "Hovered vertex should not be null.";
 						}
 						this._tempLine = new Connector({
@@ -579,7 +572,7 @@ export class Vertex {
 		// 	let sub = connector.BondType.subscribe(x=>{
 		// 		this.updateAriaLabel();
 		// 	});
-		// 	let sub2 = connector.VertexChange.pipe(filter(v => v != this)).subscribe(v =>{
+		// 	let sub2 = connector.VertexChange$.pipe(filter(v => v != this)).subscribe(v =>{
 		// 		this.updateAriaLabel();
 		// 	});
 
@@ -588,22 +581,22 @@ export class Vertex {
 		this.attachments.push(connector);
 	}
 
-	// public addLonePair(lonePair:LonePair){
+	public addLonePair(lonePair:LonePair){
 	// 	// let sub = connector.BondType.subscribe(x=>{
 	// 	// 	this.updateAriaLabel();
 	// 	// });
-	// 	// let sub2 = connector.VertexChange.pipe(filter(v => v != this)).subscribe(v =>{
+	// 	// let sub2 = connector.VertexChange$.pipe(filter(v => v != this)).subscribe(v =>{
 	// 	// 	this.updateAriaLabel();
 	// 	// });
 
 	// 	//this.attachmentSubs.set(connector, [sub, sub2]);
 
-	// 	this.attachments.push(lonePair);
-	// }
+	 	this.attachments.push(lonePair);
+	}
 
 
 
-	public removeAttachment(item: fabric.Object) {
+	public removeAttachment(item: Object) {
 		let subs = this.attachmentSubs.get(item);
 		if (subs != null) {
 			subs.forEach(v => {
@@ -641,24 +634,9 @@ export class Vertex {
 		} else {
 
 			if (settingsService.currentBondType == BondType.lonePair) {
-				// let vertexCenter = this._tempLP.owner.getCenterPoint();
-
-				// let vect = new fabric.Point(canvasCoords.x-vertexCenter.x,canvasCoords.y-vertexCenter.y);
-				// let length = Math.sqrt(Math.pow(vect.x,2) + Math.pow(vect.y,2));
-				// let normVect = new fabric.Point(vect.x/length, vect.y/length);
-				// let angle = Math.atan2(normVect.y, normVect.x);
-
-				// this._tempLP.set({
-				// 	angle:angle/Math.PI/2*360,
-				// 	left: vertexCenter.x + (normVect.x * (LonePair.shortRadius + Vertex.circleRadius)),
-				// 	top: vertexCenter.y + (normVect.y * (LonePair.shortRadius +  Vertex.circleRadius))
-				// });
-				// this._tempLP.setCoords();
-				// this._tempLP.updateKekulePosition(
-				// 	vertexCenter.x + (normVect.x * (LonePair.shortRadius + Vertex.circleRadius)), 
-				// 	vertexCenter.y + (normVect.y * (LonePair.shortRadius + Vertex.circleRadius))
-				// 	);
-
+				
+				let canvasCoords : Position = {x:ev.clientX-bounds.left,y:ev.clientY-bounds.top};
+				this._tempLP.moveUsingCoord(canvasCoords);
 
 			} else {
 
@@ -885,23 +863,97 @@ export class Vertex {
 	// 	}
 
 	// } 
+	public bondCount(){
+		let bondCount= 0;
+		for (let i = 0; i < this.attachments.length; i++) {
+			if (this.attachments[i] instanceof Connector) {
+				bondCount++;
+			}
+		}
+		return bondCount;
+	}
 
-	findNewAngle(angles: number[]): number {
+	public getAngleThatFits(coordinationNumber:number = 0){
+		let angles: number[] = [];
+		for (let i = 0; i < this.attachments.length; i++) {
+			if (this.attachments[i] instanceof LonePair) {
+				let lonePair = this.attachments[i] as LonePair;
+				angles.push(lonePair.radians);
+			} else {
+				// it's a connector, find the attached angle
+				let connector = this.attachments[i] as Connector;
+				let angle = connector.getAngleFrom(this);
+				angles.push(angle);
+			}
+		}
+		let newAngle = this.findNewAngle(angles, coordinationNumber);
+		return newAngle;
+	}
+
+	findNewAngle(angles: number[], coordinationNumber:number = 0): number {
 		let newAngle: number = 0;
 
-		if (angles.length == 0) {
-			return newAngle;
-		} else if (angles.length == 1) {
-			return angles[0] + (Math.PI / 2);
-		} else {
-
-			let blockedRange = new Range();
-			for (let i = 0; i < angles.length; i++) {
-				blockedRange.addRadian(angles[i]);
+		// We don't know the overall coordination number, so just make them fit well up to a point...
+		// Also, if we get a coordination number that is too small for the number of angles we're trying to fit.
+		if (coordinationNumber== 0 || angles.length >= coordinationNumber){
+			if (angles.length == 0) {
+				return newAngle;
+			} else if (angles.length == 1) {
+				return angles[0] + (Math.PI / 2);
+			} else if (angles.length == 2) {
+				// check if angles are ~90 apart
+				const diff = angles[1]-angles[0];
+				if (Math.abs(diff) - (Math.PI/2) < 0.1){
+					if (diff > 0){
+						return angles[1] + (Math.PI / 2);
+					} else {
+						return angles[1] - (Math.PI / 2);
+					}
+				} else {
+					return this.useBlockedRangeMethod(angles);
+				}
+			} else if (angles.length == 3){
+				angles.forEach(v=>{
+					if (Math.sign(v) == -1){
+						v+=Math.PI;
+					}
+				});
+				const diffs = [angles[1]-angles[0],angles[2]-angles[1], angles[2]-angles[0]];
+				var indexOfMaxValue = diffs.reduce((iMax, x, i, arr) => Math.abs(x) > Math.abs(arr[iMax]) ? i : iMax, 0);
+				let rightAngles=true;
+				diffs.forEach((v,i)=>{
+					if (i != indexOfMaxValue && Math.abs(v) - (Math.PI/2) > 0.1){
+						rightAngles=false;
+					}
+				});
+				if (rightAngles){
+					switch (indexOfMaxValue){
+						case 0:
+							return angles[2] + Math.PI;
+						case 1:
+							return angles[0] + Math.PI;
+						case 2:
+							return angles[1] + Math.PI;
+						default:
+							return this.useBlockedRangeMethod(angles);
+					}
+				} else {
+					return this.useBlockedRangeMethod(angles);
+				}
+			} else {
+				return this.useBlockedRangeMethod(angles);
 			}
-			newAngle = blockedRange.getFirstOpenSpace();
-
+		}else{
+			return this.useBlockedRangeMethod(angles, coordinationNumber);
 		}
+	}
+
+	useBlockedRangeMethod(angles: number[], coordinationNumber: number = 0):number{
+		let blockedRange = new Range(coordinationNumber);
+		for (let i = 0; i < angles.length; i++) {
+			blockedRange.addRadian(angles[i]);
+		}
+		const newAngle = blockedRange.getFirstOpenSpace();
 		return newAngle;
 	}
 }

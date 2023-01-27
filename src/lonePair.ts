@@ -1,240 +1,263 @@
-// import { Subject,BehaviorSubject, Observable, Subscription } from 'rxjs';
-// import { fabric } from "fabric"; 
-// import { Connector} from "./connector";
-// import {  settingsService } from './lewisStructureCanvas';
-// import { Vertex } from './vertex';
-// import { InteractionMode } from './service/settingsService';
-// //import { SettingsService} from './service/settingsService';
-// import { Kekule } from './kekuleTypings';
+import { Subject, BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { Connector } from "./connector";
+import { settingsService } from './lewisStructureCanvas';
+import { Vertex } from './vertex';
+import { InteractionMode } from './service/settingsService';
+//import { SettingsService} from './service/settingsService';
+import { Kekule } from './kekuleTypings';
+import { SVG, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element }
+	from '@svgdotjs/svg.js';
+import { Position } from './interfaces';
 
-// export interface ILonePairOptions extends fabric.IGroupOptions{
-// 	owner: Vertex;
-// 	radians?: number; 
-// 	molecule: Kekule.Molecule;
-// }
+export interface ILonePairOptions {
+	owner: Vertex;
+	radians?: number;
+	molecule: Kekule.Molecule;
+	svg: Svg;
+}
 
-// export class LonePair extends fabric.Group{
+export class LonePair {
 
-// 	static longRadius: number = 15;
-// 	static shortRadius: number = 8;
+	static dotRadius: number = 3;
+	//static longRadius: number = 15;
+	static extraMargin: number = 2; //8
 
-// 	public owner: Vertex;
-// 	private _ownerSubscription: Subscription;
+	public owner: Vertex;
+	private _ownerSubscription: Subscription;
 
-// 	private _circle1: fabric.Circle;
-// 	private _circle2: fabric.Circle;
-// 	private _selectionEllipse: fabric.Ellipse;
-// 	public radians: number;
+	private _svg: Svg;
+	private _group: SvgGroup;
+	private _circle1: SvgCircle;
+	private _circle2: SvgCircle;
+	private _selectionEllipse: SvgEllipse;
+	public radians: number;
 
-// 	private _mouseMoveEventRef;
-// 	private _mouseUpEventRef;
+	private _mouseMoveEventRef;
+	private _mouseUpEventRef;
 
-// 	private _position: Subject<fabric.Point>;
-// 	public Position: Observable<fabric.Point>;
+	private _position$: Subject<Position>;
+	public Position$: Observable<Position>;
 
-// 	private _molecule: Kekule.Molecule;
-// 	private _electrons: Kekule.ChemMarker.UnbondedElectronSet;
+	private _molecule: Kekule.Molecule;
+	private _electrons: Kekule.ChemMarker.UnbondedElectronSet;
 
-// 	constructor(options: ILonePairOptions) {
+	constructor(options: ILonePairOptions) {
+
+		// options.originX = 'center'; 
+		// options.originY = 'center';
+		// options.selectable=false;
+		// options.lockMovementX=true;
+		// options.lockMovementY=true;
+		// options.hasControls=false;
+		// options.hoverCursor=settingsService.eraserCursor;
+
+		this._svg = options.svg;
+		this._group = this._svg.group().attr("aria-label", "Lone Pair");
+		this._circle1 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(Vertex.circleRadius / 3).fill('#000000');
+		this._circle2 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(-Vertex.circleRadius / 3).fill('#000000');
+		this._selectionEllipse = this._group.ellipse(LonePair.extraMargin * 2, Vertex.circleRadius * 2)
+			.cx(0).cy(0).rotate(this.radians).attr({ 'fill-opacity': 0 })
+			.stroke({ color: 'darkred', width: 1, opacity: 0 })
+			.filterWith((add) => {
+				add.gaussianBlur(1, 1);
+			});
+
+		this.owner = options.owner;
+		this.radians = options.radians != null ? options.radians : 0;
+		this._molecule = options.molecule;
+		this._electrons = new Kekule.ChemMarker.UnbondedElectronSet();
+		this.owner.atom.appendMarker(this._electrons);
 		
-// 		options.originX = 'center'; 
-// 		options.originY = 'center';
-// 		options.selectable=false;
-// 		options.lockMovementX=true;
-// 		options.lockMovementY=true;
-// 		options.hasControls=false;
-// 		options.hoverCursor=settingsService.eraserCursor;
+		this.moveUsingRadians(this.radians);
+		// let selectionEllipse = new fabric.Ellipse({
+		// 	rx:LonePair.shortRadius,
+		// 	ry:LonePair.longRadius,
+		// 	stroke:'black',
+		// 	fill:'transparent',
+		// 	strokeDashArray: [5,5],
+		// 	strokeWidth:2,
+		// 	originX:'center',
+		// 	originY:'center',
+		// 	evented:true,
+		// 	hoverCursor:'null',
+		// 	opacity:0
+		// });
 
+
+		//super([selectionEllipse,circle1,circle2],options);
 		
-
-// 		let circle1 = new fabric.Circle({
-// 			radius:3,
-// 			fill:'black',
-// 			left: 0,
-// 			top: LonePair.longRadius/3,
-// 			originX:'center',
-// 			originY:'center'
-// 		});
-// 		let circle2 = new fabric.Circle({
-// 			radius:3,
-// 			fill:'black',
-// 			left: 0,
-// 			top: -LonePair.longRadius/3,
-// 			originX:'center',
-// 			originY:'center'
-// 		});
-// 		let selectionEllipse = new fabric.Ellipse({
-// 			rx:LonePair.shortRadius,
-// 			ry:LonePair.longRadius,
-// 			stroke:'black',
-// 			fill:'transparent',
-// 			strokeDashArray: [5,5],
-// 			strokeWidth:2,
-// 			originX:'center',
-// 			originY:'center',
-// 			evented:true,
-// 			hoverCursor:'null',
-// 			opacity:0
-// 		});
-
-		
-// 		super([selectionEllipse,circle1,circle2],options);
-// 		this.radians = options.radians != null ? options.radians : 0;
-// 		this._circle1 = circle1;
-// 		this._circle2 = circle2;
-// 		this._selectionEllipse=selectionEllipse;
-
-// 		// this._selectionEllipse.on('mouseover', this.mouseOverObject.bind(this));
-// 		// this._selectionEllipse.on('mouseout', this.mouseOutObject.bind(this));
-// 		this._selectionEllipse.bringToFront();
-
-// 		this.owner = options.owner;
-
-// 		this._molecule = options.molecule;
-// 		this._electrons = new Kekule.ChemMarker.UnbondedElectronSet();
-// 		this._electrons.canvasLonePair = this;
-// 		this.owner.atom.appendMarker(this._electrons);
-
-// 		this._ownerSubscription = this.owner.Position.subscribe(position=>{
-// 			if (this.angle == null){
-// 				return;
-// 			}
-// 			let radians = this.angle/360*2*Math.PI;
-// 			console.log(radians);
-// 			let vect = new fabric.Point(Math.cos(radians), Math.sin(radians));
-				
-// 			(this as fabric.Group).set({
-				
-// 				left: position.x + (vect.x * (LonePair.shortRadius + Vertex.circleRadius)),
-// 				top: position.y + (vect.y * (LonePair.shortRadius + Vertex.circleRadius))
-// 			});
-// 			this.setCoords();
-// 			this._electrons.coord2D = {x: position.x + (vect.x * (LonePair.shortRadius + Vertex.circleRadius)), y: position.y + (vect.y * (LonePair.shortRadius + Vertex.circleRadius))}
-// 		});
+		// this._circle1 = circle1;
+		// this._circle2 = circle2;
+		// this._selectionEllipse=selectionEllipse;
 
 		
 
-// 		this.on('mouseover', this.mouseOverObject);
-// 		this.on('mouseout', this.mouseOutObject);
-
-// 		this.on('mousedown', this.mouseDown);
-// 		this.on('moving', this.onObjectMoving);
-
-// 		// settingsService.whenMode.subscribe(mode =>{
-// 		// 	console.log('whenMovable changed on vertex');
-// 		// 	(this as fabric.Group).set({
-// 		// 		lockMovementX: mode != InteractionMode.move,
-// 		// 		lockMovementY: mode != InteractionMode.move,
-// 		// 		selectable: mode == InteractionMode.move
-// 		// 	});
-// 		// });
-
-// 	}  
-
-// 	public updateKekulePosition(x:number,y:number){
-// 		this._electrons.coord2D = {x:x,y:y};
-// 	}
-
-
-
-// 	private onObjectMoving(ev:fabric.IEvent){
-// 		console.log('lonepair moving!');
-// 		//let coords = .getCoords();
-// 		//this._position.next(new fabric.Point(ev.pointer.x, ev.pointer.y));
-// 		//this._position.next(new fabric.Point(this.left, this.top));
-// 	}
-
-// 	public _render(ctx:CanvasRenderingContext2D){
-// 		// if (this.attachments.length == 0 || this.text !== "C"){
-// 			super._render(ctx);
-
-// 	}
-
-
-// 	mouseDown(ev:fabric.IEvent){
-// 		console.log("mousedown!");
-
 		
-// 		if (settingsService.isMoveable) {
-// 			this._mouseMoveEventRef = this.mouseMoveBondDrawing.bind(this);
-// 			window.addEventListener('pointermove', this._mouseMoveEventRef);
-// 			this._mouseUpEventRef = this.mouseUp.bind(this);
-// 			window.addEventListener('pointerup', this._mouseUpEventRef);
-
-// 		} else if (settingsService.isEraseMode) {
-// 			this.owner.removeAttachment(this);	
-// 			this._ownerSubscription.unsubscribe();
-// 			this.canvas?.remove(this);
-			 
-// 		}
-		
-// 	}
+		//this._electrons.canvasLonePair = this;
 
 
-// 	mouseMoveBondDrawing(ev:PointerEvent){
-// 		let canvasCoords = this.canvas?.getPointer(ev);
-// 		if (canvasCoords == null){
-// 			return;
-// 		}
-// 		//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
-// 		console.log(`lonepair pointermove: ${ev.x}, ${ev.y} `);
-// 		if (settingsService.isMoveable){
+		this._ownerSubscription = this.owner.Position$.subscribe(position => {
+			if (this.radians == null) {
+				return;
+			}
+			console.log(this.radians);
+			let vect: Position = { x: Math.cos(this.radians), y: Math.sin(this.radians) };
+
+
+
+			this._group
+				.untransform()
+				.rotate(this.radians / Math.PI / 2 * 360)
+				.translate(position.x, position.y)
+				.translate(vect.x * (LonePair.extraMargin + Vertex.circleRadius), vect.y * (LonePair.extraMargin + Vertex.circleRadius));
+			// this._group
+			// 	.transform({
+			// 		rotate: this.radians,
+			// 		translateX: position.x + (vect.x * (LonePair.shortRadius + Vertex.circleRadius)), 
+			// 		translateY: position.y + (vect.y * (LonePair.shortRadius + Vertex.circleRadius))});
+			// this._group2.transform({
+			// 		translateX: position.x,
+			// 		translateY: position.y
+			// 	});
+			// this._group.transform({
+			// 	rotate: this.radians
+			// });
+			this._electrons.coord2D = {
+				x: position.x + (vect.x * (LonePair.extraMargin + Vertex.circleRadius)),
+				y: position.y + (vect.y * (LonePair.extraMargin + Vertex.circleRadius))
+			};
+		});
+
+
+
+		this._group.mouseover(this.mouseOver.bind(this));
+		this._group.mouseout(this.mouseOut.bind(this));
+
+		this._group.mousedown(this.mouseDown.bind(this));
+		//this._group.move(this.onObjectMoving.bind(this));
+
+
+	}
+
+	public updateKekulePosition(x: number, y: number) {
+		this._electrons.coord2D = { x: x, y: y };
+	}
+
+	private onObjectMoving(ev: fabric.IEvent) {
+		console.log('lonepair moving!');
+		//let coords = .getCoords();
+		//this._position.next(new fabric.Point(ev.pointer.x, ev.pointer.y));
+		//this._position.next(new fabric.Point(this.left, this.top));
+	}
+
+	dispose() {
+
+		this._circle1.remove();
+		this._circle2.remove();
+		this._group.remove();
+	}
+
+	mouseDown(ev: MouseEvent) {
+		console.log("mousedown!");
+
+
+		if (settingsService.isMoveable) {
+			this._mouseMoveEventRef = this.mouseMoveBondDrawing.bind(this);
+			window.addEventListener('pointermove', this._mouseMoveEventRef);
+			this._mouseUpEventRef = this.mouseUp.bind(this);
+			window.addEventListener('pointerup', this._mouseUpEventRef);
+
+		} else if (settingsService.isEraseMode) {
+			this.owner.removeAttachment(this);
+			this._ownerSubscription.unsubscribe();
+			this.dispose();
+		}
+
+	}
+
+
+	mouseMoveBondDrawing(ev: PointerEvent) {
+		const bounds = this._svg.node.getBoundingClientRect();
+		let canvasCoords : Position = {x:ev.clientX-bounds.left,y:ev.clientY-bounds.top};
+		if (canvasCoords == null) {
+			return;
+		}
+		//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
+		console.log(`lonepair pointermove: ${canvasCoords.x}, ${canvasCoords.y} `);
+		if (settingsService.isMoveable) {
+
+			let vertexCenter = this.owner.Position;
+			let vect = { x: canvasCoords.x - vertexCenter.x, y: canvasCoords.y - vertexCenter.y };
+			let length = Math.sqrt(Math.pow(vect.x, 2) + Math.pow(vect.y, 2));
+			let normVect = {x:vect.x / length, y: vect.y / length};
+			let angle = Math.atan2(normVect.y, normVect.x);
+			this.radians = angle;
 			
-// 			let vertexCenter = this.owner.getCenterPoint();
-				
-// 			let vect = new fabric.Point(canvasCoords.x-vertexCenter.x,canvasCoords.y-vertexCenter.y);
-// 			let length = Math.sqrt(Math.pow(vect.x,2) + Math.pow(vect.y,2));
-// 			let normVect = new fabric.Point(vect.x/length, vect.y/length);
-// 			let angle = Math.atan2(normVect.y, normVect.x);
-						
-// 			(this as LonePair).set({
-// 				angle:angle/Math.PI/2*360,
-// 				left: vertexCenter.x + (normVect.x * (LonePair.shortRadius + Vertex.circleRadius)),
-// 				top: vertexCenter.y + (normVect.y * (LonePair.shortRadius + Vertex.circleRadius))
-// 			});
-// 			this.setCoords();
-// 			this._electrons.coord2D = {x:  vertexCenter.x + (normVect.x * (LonePair.shortRadius + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.shortRadius + Vertex.circleRadius))};
+			this._group
+				.untransform()
+				.rotate(this.radians / Math.PI / 2 * 360)
+				.translate(vertexCenter.x, vertexCenter.y)
+				.translate(normVect.x * (LonePair.extraMargin + Vertex.circleRadius), normVect.y * (LonePair.extraMargin + Vertex.circleRadius));
 
-// 			this.canvas?.renderAll();
+			this._electrons.coord2D = { x: vertexCenter.x + (normVect.x * (LonePair.extraMargin + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.extraMargin + Vertex.circleRadius)) };
+		} else {
+			// this._tempLine.setLineEndpoint(canvasCoords.x, canvasCoords.y);
 
+		}
 
-// 			//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
-// 		} else {
-// 			// this._tempLine.setLineEndpoint(canvasCoords.x, canvasCoords.y);
-			
-// 		}
-	
-// 	}
+	}
 
-// 	public reportPositionChanged(x :number, y:number){
-// 		this._position.next(new fabric.Point(x, y));
-// 	}
-
-// 	mouseUp(ev:PointerEvent){
-// 		window.removeEventListener('pointermove', this._mouseMoveEventRef);
-// 		window.removeEventListener('pointerup', this._mouseUpEventRef);
+	public moveUsingCoord(pos:Position){
+		let vertexCenter = this.owner.Position;
+		let vect = { x: pos.x - vertexCenter.x, y: pos.y - vertexCenter.y };
+		let length = Math.sqrt(Math.pow(vect.x, 2) + Math.pow(vect.y, 2));
+		let normVect = {x:vect.x / length, y: vect.y / length};
+		let angle = Math.atan2(normVect.y, normVect.x);
+		this.radians = angle;
 		
-// 	}
+		this._group
+			.untransform()
+			.rotate(this.radians / Math.PI / 2 * 360)
+			.translate(vertexCenter.x, vertexCenter.y)
+			.translate(normVect.x * (LonePair.extraMargin + Vertex.circleRadius), normVect.y * (LonePair.extraMargin + Vertex.circleRadius));
 
-// 	mouseOverObject(ev:fabric.IEvent){
-// 		console.log('mouseoverobject id: ' + this );
-// 		let canvas = this.canvas;
-// 		this._selectionEllipse.animate('opacity',1, {
-// 			from:0,
-// 			duration:100,
-// 			onChange: canvas?.renderAll.bind(canvas)
-// 		});
-// 	}
-	
-// 	mouseOutObject(ev:fabric.IEvent){
-// 		console.log('mouseoutobject');
-// 		let canvas = this.canvas;
-// 		this._selectionEllipse.animate('opacity',0, {
-// 			from:1,
-// 			duration:100,
-// 			onChange: this.canvas?.renderAll.bind(this.canvas)
-			
-// 		});
-// 	} 
-// }
+		this._electrons.coord2D = { x: vertexCenter.x + (normVect.x * (LonePair.extraMargin + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.extraMargin + Vertex.circleRadius)) };
+	}
+
+	public moveUsingRadians(radians:number){
+		this.radians = radians;
+		let center = this.owner.Position;
+		let normx = Math.cos(radians);
+		let normy = Math.sin(radians);
+		
+		
+		this._group
+			.untransform()
+			.rotate(this.radians / Math.PI / 2 * 360)
+			.translate(center.x, center.y)
+			.translate(normx * (LonePair.extraMargin + Vertex.circleRadius), normy * (LonePair.extraMargin + Vertex.circleRadius));
+
+		this._electrons.coord2D = { 
+			x: center.x + (normx * (LonePair.extraMargin + Vertex.circleRadius)), 
+			y: center.y + (normy * (LonePair.extraMargin + Vertex.circleRadius)) 
+		};
+	}
+
+	// public reportPositionChanged(x :number, y:number){
+	// 	this._position.next(new fabric.Point(x, y));
+	// }
+
+	mouseUp(ev: PointerEvent) {
+		window.removeEventListener('pointermove', this._mouseMoveEventRef);
+		window.removeEventListener('pointerup', this._mouseUpEventRef);
+	}
+
+	mouseOver(ev: MouseEvent) {
+		this._selectionEllipse.animate(200, 0, 'now').attr({ 'stroke-opacity': 1 });
+	}
+
+	mouseOut(ev: MouseEvent) {
+		this._selectionEllipse.animate(200, 0, 'now').attr({ 'stroke-opacity': 0 });
+	}
+}
 

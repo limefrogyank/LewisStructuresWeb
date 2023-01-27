@@ -11,17 +11,22 @@ declare global{
 	}
 } 
 
+
 export interface Kekule{
 	Molecule:Kekule.Molecule;
 	Atom:Kekule.Atom;
 	Bond:Kekule.Bond;
 	Element: Kekule.Element;
 	IO:Kekule.IO;
+	MolStandardizer:Kekule.MolStandardizer;
+	ObjComparer: Kekule.ObjComparer;
 	ChemMarker:ChemMarker;
 	BondStereo:Kekule.BondStereo;
 	OpenBabel: Kekule.OpenBabel;
 	ChemStructureSearcher: Kekule.ChemStructureSearcher;
 	Render:Kekule.Render;
+
+	
 }
 
 
@@ -38,7 +43,9 @@ enum StructureComparationLevel{
 	DEFAULT=4
 };
 
+
 export namespace Kekule{
+
 	export interface Render{
 		RaphaelRendererBridge: Render.RaphaelRendererBridge;
 		get2DRendererClass(mol: Kekule.Molecule):Renderer2DClass;
@@ -90,6 +97,14 @@ export namespace Kekule{
 
 		saveFormatData(mol:Kekule.Molecule, format:string ):string;
 		saveMimeData(mol:Kekule.Molecule, mimeType:string ):string;
+	}
+
+	export interface ObjComparer{
+		compare(obj1: Molecule, obj2:Molecule, option:any);
+	}
+
+	export interface MolStandardizer{
+		standardize(molecule: Molecule, option: any):Molecule;
 	}
 	
 	export interface ObjectEx{
@@ -163,6 +178,8 @@ export namespace Kekule{
 		getNodeCount():number;
 		getNodeById(id:string):ChemStructureNode;
 		getNodeAt(index:number):ChemStructureNode;
+
+		search(mol2: StructureFragment, options:any) : any;
 	}
 
 	export interface Molecule extends StructureFragment{
@@ -173,6 +190,8 @@ export namespace Kekule{
 		appendBond(atomIndexes:number[], bondOrder:number);
 		clearConnectors();
 		clearNodes();
+		clone():Molecule;
+		setCanonicalizationIndex(option: any|null);
 
 		finalize();
 		
@@ -348,6 +367,11 @@ export namespace Kekule{
 	}
 }
 
+
+
 export const Kekule : Kekule = k;
+
+
+
 console.log(Kekule);
 (window as any).Kekule = Kekule;
