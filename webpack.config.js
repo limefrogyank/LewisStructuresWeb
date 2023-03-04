@@ -1,6 +1,7 @@
-//const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const path = require('path');
+const { dirname } = require("path");
 
 module.exports = function(env, { mode }) {
   const production = mode === 'production';
@@ -32,7 +33,8 @@ module.exports = function(env, { mode }) {
 	},
     output: {
       filename: 'bundle.js',
-      publicPath:'/'
+      publicPath:'/',
+      path: path.resolve(__dirname, "dist")
     },
     resolve: {
       extensions: ['.ts', '.js'],
@@ -50,7 +52,12 @@ module.exports = function(env, { mode }) {
       }
     },
     plugins: [
-      //new CleanWebpackPlugin()
+      new CleanWebpackPlugin({
+        cleanOnceBeforeBuildPatterns: [
+          '**/*',
+          '!openbabel*'
+      ]
+      })
     ],
     module: {
       rules: [

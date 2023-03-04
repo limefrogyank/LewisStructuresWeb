@@ -57,6 +57,7 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, useFlat:boolean=
                 break;
         }
         let lonePairsToAdd = (valenceElectrons - atom.charge - totalPairs ) / 2;
+        //console.log(`Adding ${lonePairsToAdd} lone pairs.`);
         for (let j=0; j<lonePairsToAdd;j++){
             let lonepair = new Kekule.ChemMarker.UnbondedElectronSet();
             atom.appendMarker(lonepair);
@@ -72,7 +73,7 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, useFlat:boolean=
         let bonds = centerAtom.getLinkedBonds();
         let linkedCentralAtoms = linked.filter(x=> centerAtoms.includes(x));
         let terminalAtoms = linked.filter(x=> !centerAtoms.includes(x));
-        console.log('getMarkersOfType error?');
+        //console.log('getMarkersOfType error?');
         let lonepairs = centerAtoms[i].getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet,false);
         let length = getAverageBondLength(centerAtom,linked);
         

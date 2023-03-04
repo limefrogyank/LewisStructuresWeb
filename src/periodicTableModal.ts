@@ -110,7 +110,6 @@ export class PeriodicTableModal extends FASTElement {
 			for (let group = 1; group<=18; group++){
 				let found = elements.find(x=>x.xpos == group && x.ypos == period);
 				if (found !== undefined){
-					console.log(found);
 					row.set(group,found);
 				}else{
 					row.set(group, {'number': -1});

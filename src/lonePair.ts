@@ -6,16 +6,18 @@ import { InteractionMode } from './service/settingsService';
 //import { SettingsService} from './service/settingsService';
 import { SVG, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element }
 	from '@svgdotjs/svg.js';
-import { Position } from './interfaces';
+import { IDisposable, Position } from './interfaces';
+import { hoverColor } from './constants';
 
 export interface ILonePairOptions {
 	owner: Vertex;
 	radians?: number;
 	molecule: Kekule.Molecule;
 	svg: Svg;
+	electronSet: Kekule.ChemMarker.UnbondedElectronSet
 }
 
-export class LonePair {
+export class LonePair implements IDisposable {
 
 	static dotRadius: number = 3;
 	//static longRadius: number = 15;
@@ -56,7 +58,7 @@ export class LonePair {
 		this._circle2 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(-Vertex.circleRadius / 3).fill('#000000');
 		this._selectionEllipse = this._group.ellipse(LonePair.extraMargin * 2, Vertex.circleRadius * 2)
 			.cx(0).cy(0).rotate(this.radians).attr({ 'fill-opacity': 0 })
-			.stroke({ color: 'darkred', width: 1, opacity: 0 })
+			.stroke({ color: hoverColor, width: 1, opacity: 0 })
 			.filterWith((add) => {
 				add.gaussianBlur(1, 1);
 			});
@@ -64,8 +66,9 @@ export class LonePair {
 		this.owner = options.owner;
 		this.radians = options.radians != null ? options.radians : 0;
 		this._molecule = options.molecule;
-		this._electrons = new Kekule.ChemMarker.UnbondedElectronSet();
-		this.owner.atom.appendMarker(this._electrons);
+		//this._electrons = new Kekule.ChemMarker.UnbondedElectronSet();
+		this._electrons = options.electronSet;
+		//this.owner.atom.appendMarker(this._electrons);  // GOING TO ADD LONE PAIR TO KEKULE MODEL BEFORE USING THIS CLASS.
 		
 		this.moveUsingRadians(this.radians);
 		// let selectionEllipse = new fabric.Ellipse({
@@ -99,7 +102,7 @@ export class LonePair {
 			if (this.radians == null) {
 				return;
 			}
-			console.log(this.radians);
+			//console.log(this.radians);
 			let vect: Position = { x: Math.cos(this.radians), y: Math.sin(this.radians) };
 
 
@@ -143,13 +146,14 @@ export class LonePair {
 	}
 
 	private onObjectMoving(ev: fabric.IEvent) {
-		console.log('lonepair moving!');
+		//console.log('lonepair moving!');
 		//let coords = .getCoords();
 		//this._position.next(new fabric.Point(ev.pointer.x, ev.pointer.y));
 		//this._position.next(new fabric.Point(this.left, this.top));
 	}
 
 	dispose() {
+		this.owner.atom.removeMarker(this._electrons);
 
 		this._circle1.remove();
 		this._circle2.remove();
@@ -157,7 +161,7 @@ export class LonePair {
 	}
 
 	mouseDown(ev: MouseEvent) {
-		console.log("mousedown!");
+		//console.log("mousedown!");
 
 
 		if (settingsService.isMoveable) {
@@ -182,7 +186,7 @@ export class LonePair {
 			return;
 		}
 		//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
-		console.log(`lonepair pointermove: ${canvasCoords.x}, ${canvasCoords.y} `);
+		//console.log(`lonepair pointermove: ${canvasCoords.x}, ${canvasCoords.y} `);
 		if (settingsService.isMoveable) {
 
 			let vertexCenter = this.owner.Position;

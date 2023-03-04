@@ -4,8 +4,9 @@ import { settingsService } from './lewisStructureCanvas';
 import { BondType } from './service/settingsService';
 import { Subscription, Observable, BehaviorSubject, Subject, combineLatest, observable } from "rxjs";
 import { SVG, Line as SvgLine, Defs as SvgDefs, Pattern as SvgPattern, Polygon as SvgPolygon, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Svg, Text as SvgText, Element, Shape } from '@svgdotjs/svg.js';
-import { Position, Position as Vector2 } from "./interfaces";
+import { IDisposable, Position, Position as Vector2 } from "./interfaces";
 import { isNullOrWhiteSpace } from "@microsoft/fast-web-utilities";
+import { hoverColor } from "./constants";
 
 interface IConnectorOptions {
 	vertex1: Vertex;
@@ -18,7 +19,7 @@ interface IConnectorOptions {
 
 
 
-export class Connector {
+export class Connector implements IDisposable {
 
 	//_testVariable:number;
 	//_ellipse:fabric.Ellipse;
@@ -135,11 +136,11 @@ export class Connector {
 		this._group = this._svg.group().cx(0).cy(0).attr("tabindex","0").attr("aria-label", "Bond");;//.transform({translateX: options.v})
 
 		this._selectableCircle = this._group.ellipse()
-			.attr({ 'fill-opacity': 0.0, fill:'darkred'})
-			.stroke({ color: 'darkred', width: 1, opacity: 0 })
+			.attr({ 'fill-opacity': 0.0, fill: hoverColor})
+			.stroke({ color: hoverColor, width: 1, opacity: 0 })
 			.filterWith((add) => {
 				add.gaussianBlur(2, 2);
-			});;
+			});
 		this.adjustSelectableCircle();
 
 		this._line1 = this._group.line(this._vertex1.Position.x, this._vertex1.Position.y, this._vertex2.Position.x, this._vertex2.Position.y)
@@ -161,6 +162,7 @@ export class Connector {
 		//this._selectableCircle.bringToFront();
 		this._selectableCircle.mousedown(this.mouseDown.bind(this));
 
+		this._molecule = options.molecule;
 
 		this._vertex1 = options.vertex1;
 		this._vertex2 = options.vertex2;
@@ -234,11 +236,17 @@ export class Connector {
 					this._line3 = null;
 				}
 				if (this._line1 == null) {
-					this._line1 = this._group.line(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y).attr("pointer-events", "none");
+					this._line1 = this._group.line(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y)
+					.stroke("#000000")
+					.attr("pointer-events", "none");
 				} else {
 					this._line1.plot(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y);
 				}
 				this._line1.attr("stroke-dasharray", dashArray);
+				if (this._polygon != null) {
+					this._polygon.remove();
+					this._polygon = null;
+				}
 				break;
 			case BondType.double:
 				perpVector = { x: perpVector.x * 4, y: perpVector.y * 4 };
@@ -274,6 +282,10 @@ export class Connector {
 				if (this._line3 != null) {
 					this._line3.remove();
 					this._line3 = null;
+				}
+				if (this._polygon != null) {
+					this._polygon.remove();
+					this._polygon = null;
 				}
 				break;
 			case BondType.triple:
@@ -327,7 +339,7 @@ export class Connector {
 				}
 				this._pattern = this._svg.pattern(8,8,add=>{
 					add.rect(4,8).fill('#000000');
-					add.rect(4,8).move(4,0).fill('#ffffff');
+					add.rect(4,8).move(4,0).fill('#ffffff00');
 				}).rotate(-angle*360/2/Math.PI);
 				if (this._line1 != null) {
 					this._line1.remove();
@@ -441,7 +453,7 @@ export class Connector {
 	// }
 
 	mouseDown(ev:MouseEvent){
-		console.log("mousedown on connector!");
+		//console.log("mousedown on connector!");
 		ev.stopPropagation();
 		if (settingsService.isEraseMode){
 			this.dispose();

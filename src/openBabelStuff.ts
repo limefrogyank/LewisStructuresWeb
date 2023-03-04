@@ -50,7 +50,7 @@ export function obMolToKekule(ob: OpenBabelModule, obMol:OpenBabelModule.OBMol, 
 			conv['delete']();
 		}
 
-        obBaseToKekule(ob, obMol,result);
+        obBaseToKekule(ob, obMol, result);
 		
 		// fill the childObjMap
 		if (childObjMap)
@@ -86,5 +86,37 @@ export function obMolToKekule(ob: OpenBabelModule, obMol:OpenBabelModule.OBMol, 
 				}
 			}
 		}
+    return result;
+}
+
+
+
+export function obMolToCAN(ob: OpenBabelModule, obMol:OpenBabelModule.OBMol) : string{
+    var result = "";
+
+	// TODO: The bond of OBMol often has a implicit stereo, wedge/hash and so on must be calculated from
+	//  separate OBStereoData field of OBMol, which is very complex. So here we simply use MOL format string
+	//  to convert from OBMol and Kekule.Molecule
+	var conv = new ob.ObConversionWrapper();
+	try
+	{
+		
+		conv.setOutFormat('', 'can');  // "can" is canonical SMILES
+		//conv.addOption('n', 'OUTOPTIONS','' );  // can't get this to work
+		var sCANdata = conv.writeString(obMol, false);
+		result = sCANdata
+		const split = sCANdata.split("\t");  // just going to remove the title which is separated by a tab
+		if (split.length > 1){
+			result = split[0];
+		}
+	}
+	finally
+	{
+		conv['delete']();
+	}
+
+	//obBaseToCAN(ob, obMol,result);
+		
+		
     return result;
 }

@@ -6,7 +6,6 @@ import {
   } from '@microsoft/fast-components';
 import { LewisStructureCanvas } from './lewisStructureCanvas';
 import { BondType, InteractionMode, SettingsService } from './service/settingsService';
-import { fabric } from "fabric"; 
 import { Button } from '@microsoft/fast-foundation';
 
 const foobarRequire = m => eval('require')(m); // trick webpack
@@ -24,36 +23,11 @@ provideFASTDesignSystem()
 
 export function getMolecule(lewisStructureCanvas: LewisStructureCanvas){
 	lewisStructureCanvas.getMolecule();
-	console.log("FUNCTION");
 }
+
 (window as any).getMolecule = getMolecule;
 export var settingsService = new SettingsService();
 
-declare module 'fabric' {
-	export namespace fabric {
-		export interface ICanvasOptions{
-			enablePointerEvents:boolean;
-		}
-		export interface Canvas{
-			enablePointerEvents:boolean;
-		}
-	}
-}
-
-// var _container = document.getElementsByClassName('content')[0];
-// console.log(_container);
-
-// var _canvas = new fabric.Canvas('canvas1',{
-// 	width: _container.clientWidth,
-// 	height: _container.clientHeight,
-// 	selection: false,
-// 	enablePointerEvents: true
-	
-// });
-
-// console.log(_canvas.enablePointerEvents);
-
-//_canvas.initializePointerEvents();
 
 let modeButtons = document.getElementsByClassName("toolButton");
 for (let i=0; i< modeButtons.length; i++){
@@ -131,20 +105,4 @@ settingsService.whenMode.subscribe(mode=>{
 	}
 }); 
 
-function movingObject(ev:fabric.IEvent){
-	let center = ev.target?.getCenterPoint();
 
-}
-
-function mouseOverObject(ev:fabric.IEvent){
-	console.log('mouseover');
-}
-function mouseOutObject(ev:fabric.IEvent){
-	console.log('mouseout');
-}
-
-function addEventsToObject(obj:fabric.Object){
-	obj.on('moving', movingObject);
-	obj.on('mouseover', mouseOverObject);
-	obj.on('mouseout', mouseOutObject);
-}

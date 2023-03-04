@@ -7,8 +7,9 @@ import { settingsService } from './lewisStructureCanvas';
 import { InteractionMode, BondType } from './service/settingsService';
 import { Range } from './rangeRadians';
 import { SVG, ForeignObject as SvgForeignObject, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element } from '@svgdotjs/svg.js';
-import { Position } from './interfaces';
+import { IDisposable, Position } from './interfaces';
 import { LonePair } from './lonePair';
+import { hoverColor } from './constants';
 
 
 export interface IVertexOptions {
@@ -24,7 +25,7 @@ export interface IVertexOptions {
 }
 
 
-export class Vertex {
+export class Vertex implements IDisposable {
 
 	static circleRadius: number = 15;
 
@@ -37,7 +38,7 @@ export class Vertex {
 	private _circle: SvgCircle;
 	private _foreignObject: SvgForeignObject;
 	private _div: Element;
-
+	private _runner: Runner;
 
 
 	private _tempLine: Connector | null;
@@ -85,12 +86,14 @@ export class Vertex {
 		// this._div.node.textContent = "CHANGED it!"
 
 
-		this._circle = this._group.circle(Vertex.circleRadius * 2);
+		this._circle = this._group.circle(Vertex.circleRadius * 2 - 4);
 		//this._circle.cx(options.x).cy(options.y);
 		this._circle.cx(0).cy(0);
 		//this._circle.move(-Vertex.circleRadius, -Vertex.circleRadius);
 		this._circle.fill({ color: '#ffffff', opacity: 1 });
-		this._circle.stroke({ color: 'darkred', width: 1, dasharray: '5 5', opacity: 0 });
+		this._circle.stroke({ color: hoverColor, width: 4, opacity: 0 }).filterWith((add) => {
+			add.gaussianBlur(2, 2);
+		});
 
 		this._text = this._group.text(options.identity !== undefined ? options.identity : "");
 		this._text.font({ size: 20 });
@@ -164,7 +167,11 @@ export class Vertex {
 			this._position$.next({ x: transform.translateX ?? 0, y: transform.translateY ?? 0 });
 		});
 
-		this._group.click((ev: MouseEvent) => { ev.preventDefault(); ev.stopPropagation(); console.log("TRYING TO STOP PROP of click") });
+		this._group.click((ev: MouseEvent) => { 
+			ev.preventDefault(); 
+			ev.stopPropagation(); 
+			//console.log("TRYING TO STOP PROP of click"); 
+		});
 
 		this._group.mousedown(this.mouseDown.bind(this));
 		//this._circle.mousedown(this.mouseDown);
@@ -226,15 +233,8 @@ export class Vertex {
 			ev.preventDefault();
 			return;
 		}
-		this._circle.animate({
-			duration: 1000,
-			delay: 0,
-			when: 'now',
-			swing: true,
-			times: 1,
-			wait: 0
-		}).ease('<>').transform({ rotate: 180 })
-
+		this._runner?.reset();
+		this._runner = this._circle
 			.animate({
 				duration: 200,
 				delay: 0,
@@ -244,14 +244,16 @@ export class Vertex {
 				wait: 0
 			}).attr({ 'stroke-opacity': 1 });
 	}
+
 	mouseLeave(ev: MouseEvent) {
 		if (this.disableEvents) {
 			ev.preventDefault();
 			return;
 		}
-		this._circle.timeline().stop();
+		//this._circle.timeline().stop();
 		this._circle.transform({ rotate: 0 });
-		this._circle.animate(200).attr({ 'stroke-opacity': 0 });
+		this._runner?.reset();
+		this._runner = this._circle.animate(200).attr({ 'stroke-opacity': 0 });
 	}
 
 	public dispose() {
@@ -261,10 +263,11 @@ export class Vertex {
 		this._text.remove();
 		this._group.remove();
 
-		this.attachments.forEach((v: any) => {
-			v.dispose();
-			// 	this.canvas?.remove(v);
-		});
+		let index = this.attachments.length - 1;
+		while (index >= 0){
+			(this.attachments[index] as any).dispose();
+			index -= 1;
+		}
 		this._position$.complete();
 		this._symbol$.complete();
 		// settingsService.keyboardDiv?.removeChild(this._tabDiv);
@@ -272,11 +275,6 @@ export class Vertex {
 		this._molecule.removeNode(this.atom);
 		this._subscription.unsubscribe();
 
-	}
-
-	private onObjectMoving(ev: fabric.IEvent) {
-		console.log('vertex moving!');
-		//this._position.next(new fabric.Point(this.left!, this.top!));
 	}
 
 	public _render(ctx: CanvasRenderingContext2D) {
@@ -414,11 +412,14 @@ export class Vertex {
 				}
 				let newAngle = this.findNewAngle(angles);
 
+				const electronSet = new Kekule.ChemMarker.UnbondedElectronSet();
+				this.atom.appendMarker(electronSet);
 				this._tempLP = new LonePair({
 					radians: newAngle,
 					owner: this,
 					molecule: this._molecule,
-					svg: this._svg
+					svg: this._svg,
+					electronSet: electronSet
 				});
 
 				this.attachments.push(this._tempLP);
@@ -569,32 +570,12 @@ export class Vertex {
 	}
 
 	public addConnector(connector: Connector) {
-		// 	let sub = connector.BondType.subscribe(x=>{
-		// 		this.updateAriaLabel();
-		// 	});
-		// 	let sub2 = connector.VertexChange$.pipe(filter(v => v != this)).subscribe(v =>{
-		// 		this.updateAriaLabel();
-		// 	});
-
-		//	this.attachmentSubs.set(connector, [sub, sub2]);
-
 		this.attachments.push(connector);
 	}
 
 	public addLonePair(lonePair:LonePair){
-	// 	// let sub = connector.BondType.subscribe(x=>{
-	// 	// 	this.updateAriaLabel();
-	// 	// });
-	// 	// let sub2 = connector.VertexChange$.pipe(filter(v => v != this)).subscribe(v =>{
-	// 	// 	this.updateAriaLabel();
-	// 	// });
-
-	// 	//this.attachmentSubs.set(connector, [sub, sub2]);
-
 	 	this.attachments.push(lonePair);
 	}
-
-
 
 	public removeAttachment(item: Object) {
 		let subs = this.attachmentSubs.get(item);

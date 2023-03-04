@@ -1,5 +1,5 @@
 
-import { FASTElement, customElement, attr, html, ref, observable, Observable} from '@microsoft/fast-element';
+import { FASTElement, customElement, attr, html, ref, observable, Observable } from '@microsoft/fast-element';
 import { PeriodicTableModal } from './periodicTableModal';
 import { Vertex } from './vertex';
 import { InteractionMode, SettingsService, BondType } from './service/settingsService';
@@ -11,7 +11,7 @@ import * as obm from './kekule/dist/extra/openbabel.js';
 //import { LonePair } from './lonePair';
 import { Button, TextField } from '@fluentui/web-components';
 //import * as openchemlib from 'openchemlib';
-import { obMolToKekule } from './openBabelStuff';
+import { obMolToCAN, obMolToKekule } from './openBabelStuff';
 //import * as raph from 'raphael';
 import { generateTerminalTetrahedralVectors, getAverageBondLength, getBondAngle, getTetrahedralVectors, getTrigonalPlanarVectors } from './angles';
 import { addLonePairsAndRedraw } from './redrawing';
@@ -20,10 +20,11 @@ import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
 import './openbabel.js'
 import { Connector } from './connector';
-import { Position } from './interfaces';
+import { ComparisonResult, IComparisonResult, Position } from './interfaces';
 import { LonePair } from './lonePair';
-import {Kekule as k} from 'kekule';
 
+import { Kekule as k } from 'kekule';
+import { mimeTests, samples } from './tests';
 k; //loads kekule stuff, prevents tree-shaking.
 
 declare global {
@@ -63,9 +64,12 @@ export namespace OpenBabelModule {
 		readString(mol: OBMol, data: string);
 		writeString(mol: OBMol, trimWhiteSpace: boolean): string;
 		delete(): void;
+		addOption(empty: string, option: string, value: string|null): void;
 
 		getSupportedInputFormatsStr(delimiter: string): string;
 		getSupportedOutputFormatsStr(delimiter: string): string;
+
+		OUTOPTIONS: string;
 	}
 	export interface OBMol {
 		new(): OBMol;
@@ -238,12 +242,15 @@ g:focus-visible{
 	<div role="toolbar" style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 		<div style="display:flex;margin-right:5px;">
 			<fluent-button appearance="outline" @click="${x => x.getMolecule()}">Load Molecule</fluent-button>
-			<fluent-text-field :value="${x => x.smiles}" @change="${(x,c)=> x.smiles = (c.event.target as TextField).value ?? '' }"></fluent-text-field>
-			<fluent-button appearance="outline" @click="${x=> x.compareMoleculeAsync(x.smiles)}" >Check Molecule</fluent-button>
-			<fluent-button appearance="outline" >B</fluent-button>
+			<fluent-button appearance="outline" @click="${x => x.getMime()}">Get Mime</fluent-button>
+			<fluent-text-field :value="${x => x.smiles}" @change="${(x, c) => x.smiles = (c.event.target as TextField).value ?? ''}"></fluent-text-field>
+			<fluent-button appearance="outline" @click="${x => x.compareMoleculeAsync(x.smiles)}" >Check Molecule</fluent-button>
+			<fluent-button appearance="outline" @click="${x => x.runTestsAsync()}">Run Tests</fluent-button>
 		</div>
 	</div>
-<div>${x => x.visibleElementSelector}</div>
+<textarea >
+${x => x.debugString}
+</textarea>
 
 </fluent-design-system-provider>
 `;
@@ -283,6 +290,7 @@ obm;
 (window as any).OpenBabelModule = obm;
 
 
+
 // hack to make this work!
 //let s = window.setInterval(()=>{
 //console.log(window.OpenBabelModule);
@@ -308,7 +316,8 @@ export class LewisStructureCanvas extends FASTElement {
 
 	@attr visibleElementSelector: boolean = false;
 
-	smiles:string;
+	@observable debugString: string = "";
+	smiles: string;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;
@@ -336,7 +345,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 	public dismissPeriodicTable() {
 		let s = SVG();
-		console.log('dismised!');
+		//console.log('dismised!');
 		this.visibleElementSelector = false;
 		this.periodicTableButton.focus();
 	}
@@ -349,63 +358,85 @@ export class LewisStructureCanvas extends FASTElement {
 
 	}
 
+	public async runTestsAsync() {
+		for (const mimeTest of mimeTests) {
+			this.molecule = new Kekule.Molecule();
+			let tempKekuleMolecule = await this.loadSmilesAsync(mimeTest.smiles);
+			addLonePairsAndRedraw(tempKekuleMolecule, false);
+			this.clearMolecule();
+			this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
+			let testIndex = 0;
+			for (const unitTest of mimeTest.tests) {
+				const moleculeToCompareWith = Kekule.IO.loadMimeData(unitTest.tryMatchWith, 'chemical/x-kekule-json');
+				const result = this.compareStructure(this.molecule, moleculeToCompareWith);
+				for (const key in result) {
+					if (result[key] !== unitTest.result[key]) {
+						console.log(`Test failed for ${mimeTest.smiles} and ${unitTest.tryMatchWith}`);
+						console.log(`Expected ${unitTest.result[key]} but got ${result[key]}`);
+						console.log(unitTest.result);
+						console.log(result);
+						console.log("Test Index: " + testIndex);
+					}
+				}
+				const badNodes = this.checkDashWedgeBonds(moleculeToCompareWith);
+				if (badNodes.length > 0 && unitTest.perspectiveTest.pass ) {
+					console.log(`For ${mimeTest.smiles}, index=${testIndex}, ${badNodes.length} node(s) did not have perspective drawn correctly.`);
+					console.log(badNodes);
+				} else if (badNodes.length === 0 && !unitTest.perspectiveTest.pass) {
+					console.log(`For ${mimeTest.smiles}, index=${testIndex}, molecule should have failed the perspective test, but did not.`);
+				}
+				testIndex++;
+			}
+
+
+			//const compareResult = await this.compareMoleculeAsync(sample);
+			let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-kekule-json');
+			let svg = this.exportSVG();
+			let smiles = Kekule.IO.saveFormatData(this.molecule, 'smi');
+			this.debugString += await this.exportCanonicalSmilesAsync(this.molecule);
+			this.debugString += "\n\n";
+		}
+	}
+
 	public async getMolecule(): Promise<string> {
 		if (this.molecule == null) {
 			return "";
 		}
 		//let res = await this.loadSmilesAsync('CC');
-		let samples = [
-			'C=O',
-			'N(=O)[O-]', //bent (from trigonal planar)
-			'[CH3-]', //tetrahedral
-			'FB(F)F',//trigonal planar
-			'C(F)(F)C(F)(F)CCl',// complex tetrahedral
-			'P(Cl)(Cl)(Cl)(Cl)Cl', //trigonal bipyramidal
-			'S(F)(F)(F)F',//seesaw
-			'Cl(F)(F)F',//t-shape
-			'I[I-]I',//linear from trigonal bipyramidal
-			'S(F)(F)(F)(F)(F)F', //octahedral
-			'Br(F)(F)(F)(F)F',//square pyramid
-			'[Xe](F)(F)(F)F' //square planar
-		];
-		let index = 0;
+
+		let index = 1;
 		let res = await this.loadSmilesAsync(samples[index]);
+		console.log(res);
+		let clone = res.clone();
+		addLonePairsAndRedraw(clone, false);
+		console.log(clone);
+		this.molecule = this.drawMolecule(clone, this.mainSVG, true);
 
-		addLonePairsAndRedraw(res, false);
-		this.molecule = this.drawMolecule(res, this.mainSVG, true);
-
-		// let bridge = new Kekule.Render.RaphaelRendererBridge();
-		// let canvas = document.createElement('div');
-		// let context = bridge.createContext(canvas, 400,400);
-		// let renclass= Kekule.Render.get2DRendererClass(res);
-		// let renderer = new renclass(res, bridge);
-
-		// let configObj = Kekule.Render.Render2DConfigs.getInstance();
-		// let options = Kekule.Render.RenderOptionsUtils.convertConfigsToPlainHash(configObj);
-
-		// renderer.draw(context,{x:200,y:200},options);
-
-
-		// console.log(mol.getNumberOfHydrogens());
-		// //mol.removeExplicitHydrogens(false);
-		// mol.addImplicitHydrogens();
-		// console.log(mol.toSVG(200,300));
-		// console.log(mol.toMolfile());
 		let compareResult = await this.compareMoleculeAsync(samples[index]);
 		console.log(`They match?  ${compareResult}`);
 		//Kekule.IO.loadFormatData
 
 		let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-kekule-json');
+
 		let svg = this.exportSVG();
+		return mime;
+	}
+
+	public getMime() {
+		if (this.molecule == null) {
+			return "";
+		}
+		let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-kekule-json');
+		console.log(mime);
 		return mime;
 	}
 
 	private loadSmilesAsync(smiles: string): Promise<Kekule.Molecule> {
 		return new Promise<Kekule.Molecule>((resolve, reject) => {
-			console.log("running load smiles!");
+			//console.log("running load smiles!");
 			let openBabel = window.OpenBabelModule();
 			openBabel.onRuntimeInitialized = () => {
-				console.log("INitialized!");
+				//console.log("INitialized!");
 				(window as any).ob = openBabel;
 
 				let mol = new openBabel.OBMol();
@@ -421,31 +452,31 @@ export class LewisStructureCanvas extends FASTElement {
 				for (let i = 0; i < atomNum; i++) {
 					let atom = mol.GetAtom(i + 1); //non-zero index
 					mol.AddHydrogens(atom);
-
-					// if (atom.GetHyb() == 3 && atom.GetFormalCharge() == -1){
-					// 	let fakeAtom= mol.NewAtom();
-					// 	let fakeBond = mol.NewBond();
-					// 	fakeAtom.SetAtomicNum(86);  // use He
-					// 	fakeBond.SetBondOrder(1);
-					// 	fakeAtom.AddBond(fakeBond);
-					// 	atom.AddBond(fakeBond);
-					// 	fakeBond.SetBegin(atom);
-					// 	fakeBond.SetEnd(fakeAtom);
-					// }
-
-					//console.log("number: " + atom.GetAtomicNum() + "  with hybridization: " + atom.GetHyb()) + "  with bonds: " + atom.get;
 				}
-
-
-				//let r = conv.getSupportedOutputFormatsStr('\n');
-				// let r2 = conv.getSupportedInputFormatsStr('\n');
-				// let result = conv.writeString(mol,false);
 				let result = new Kekule.Molecule();
 				obMolToKekule(openBabel, mol, result, null);
 
-
-
 				resolve(result);
+			};
+		});
+	}
+
+	private exportCanonicalSmilesAsync(molecule: Kekule.Molecule): Promise<string> {
+		return new Promise<string>((resolve, reject) => {
+			let molFile = Kekule.IO.saveMimeData(molecule, 'chemical/x-mdl-molfile');
+			let openBabel = window.OpenBabelModule();
+			openBabel.onRuntimeInitialized = () => {
+				//console.log("INitialized!");
+				(window as any).ob = openBabel;
+
+				let mol = new openBabel.OBMol();
+				let conv = new openBabel.ObConversionWrapper();
+				conv.setInFormat('', "mol");
+				conv.readString(mol, molFile);
+				
+				const can = obMolToCAN(openBabel, mol);
+
+				resolve(can);
 			};
 		});
 	}
@@ -459,54 +490,271 @@ export class LewisStructureCanvas extends FASTElement {
 		if (this.molecule == null) {
 			return false;
 		}
-		console.log(smiles);
+		//console.log(smiles);
 		let molToCompareWith = await this.loadSmilesAsync(smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
-		console.log('Loaded');
-		console.log(this.molecule);
-		console.log(molToCompareWith);
-		const result = this.molecule.equalStructure(molToCompareWith, { 'level': 4 });  // this gives structure only
-		console.log("OK initial result: " + result);
+		addLonePairsAndRedraw(molToCompareWith, false);
+		//console.log('Loaded');
+		//console.log(this.molecule);
+		//console.log(molToCompareWith);
+		//console.log(this.molecule.nodes.map(v=> (v as Kekule.Atom).atomicNumber));
+		//console.log(molToCompareWith.nodes.map(v=> (v as Kekule.Atom).atomicNumber))
+		//const result2 = this.molecule.equalStructure(molToCompareWith, { 'level': 4,clearHydrogens: false });  // this gives structure only
+		//console.log("OK initial result: " + result2);
+		let result = this.compareStructure(this.molecule, molToCompareWith);
+		//console.log(result);
 
-		let result1 = this.molecule.search(molToCompareWith, { 'level': 1 });
-		//let result1 = Kekule.ChemStructureSearcher.findSubStructure(this.molecule, molToCompareWith, { exactMatch: false });
-		console.log(result1);
-		// if (result1 != undefined){
-		// 	for (let i =0; i< result1.length; i++){
-		// 		let item = result1[i];
-		// 		if (item.CLASS_NAME === "Kekule.Atom"){
-		// 			//check for hydrogens
-		// 			console.log("GOT AN ATOM");
-		// 		} else if (item.CLASS_NAME === "Kekule.Bond"){
-		// 			console.log("got a bond");
-		// 		}
-		// 	}
-		// }
-
-
-		// let result2 = molToCompareWith.search(this.molecule, { 'level': 1 });
-		// //let result2 = Kekule.ChemStructureSearcher.findSubStructure(molToCompareWith, this.molecule, { exactMatch: false });
-		// console.log(result2);
-		
-		//const hydr = this.molecule.getHydrogenCount();
-		// for lone pairs, need to check manually
-		// for stereochemistry, need to check manually.
-		// this will return true even if missing hydrogens
-		console.log(result);
-		return result;
+		//console.log("OK");
+		return true;
 
 	}
 
-	private compareStructure(mol1: Kekule.Molecule, mol2: Kekule.Molecule){
+	private checkDashWedgeBonds(mol: Kekule.Molecule): Kekule.Atom[] {
+		// If done badly, the compareStructure function will mark stereochemistry wrong regardless.
+		// However, ammonia is accepted by the compareStructure function as correct whether you
+		// use three regular single bonds or 1 dash, 1 wedge, and 1 plain bond.  
+		// So, we need to check for this case if enforcement of perspective drawing is needed.  
+		let atoms = mol.nodes.filter(v => v instanceof Kekule.Atom) as Kekule.Atom[];
+		const badStereoNodes : Kekule.Atom[] = [];
+		for (const atom of atoms) {
+			const bonds = atom.getLinkedBonds();
+			const lonePairs = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
+			switch (bonds.length + lonePairs.length) {
+				case 0:  // maybe a cation?
+				case 1:  // maybe a plain He atom?
+				case 2:
+				case 3:
+					break;
+				case 4:
+					if (bonds.length <= 2) {
+						break;
+					} else {
+						if (bonds.length == 3) {
+							if (bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 1
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 1
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 1) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;
+							}
+						} else if (bonds.length == 4) {
+							// two scenarios: 1) two simple, 1 dash, 1 wedge
+							//               2) two dash and two wedge
+							if ((bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 2
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 1
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 1)
+								||
+								(bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 2
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 2)) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;							}
+						} else {
+							break;
+						}
+					}
+				case 5:
+					if (bonds.length <= 3) {
+						break;
+					} else {
+						if (bonds.length == 4) {
+							if (bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 2
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 1
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 1) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;
+							}
+						} else if (bonds.length == 5) {
+							if (bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 3
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 1
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 1) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;
+							}
+						} else {
+							break;
+						}
+					}
+				case 6:
+					if (bonds.length <= 3) {
+						break;
+					} else {
+						if (bonds.length == 4) {
+							// two scenarios: 4 simple or  2 dash, 2 wedge 
+							if ((bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 4)
+								||
+								(bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 2
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 2)) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;
+							}
+						} else if (bonds.length == 5) {
+							// three scenarios: 4 simple + 1 dash, 4 simple + 1 wedge,  or  2 dash + 2 wedge + 1 simple
+							if ((bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 4
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 1)
+								||
+								(bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 4
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 1)
+								||
+								(bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 2
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 2
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 1)) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;
+							}
+						} else if (bonds.length == 6) {
+							if ((bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 2
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 2
+								&& bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 2)
+								||
+								(bonds.filter(x => x.stereo == Kekule.BondStereo.UP).length == 1
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.DOWN).length == 1
+									&& bonds.filter(x => x.stereo == Kekule.BondStereo.NONE).length == 4)) {
+								break;
+							} else {
+								badStereoNodes.push(atom);
+								break;
+							}
+						} else {
+							break;
+						}
+					}
+				default:
+					break;
+			}
+		}
+		return badStereoNodes;
+	}
+
+	private compareStructure(mol1: Kekule.Molecule, mol2: Kekule.Molecule): ComparisonResult {
 		let m1 = mol1.clone();
 		let m2 = mol2.clone();
-		m1.setCanonicalizationIndex(null);
-		m2.setCanonicalizationIndex(null);
-		m1 = Kekule.MolStandardizer.standardize(m1, {});
-		m2 = Kekule.MolStandardizer.standardize(m2, {});
-		let options = {doStandardize: true, extraComparisonProperties: 'canonicalizationIndex'};
-
-		return Kekule.ObjComparer.compare(m1,m1, options);
+		//m1.setCanonicalizationIndex(null);
+		//m2.setCanonicalizationIndex(null);
+		m1 = Kekule.canonicalizer.canonicalize(m1, null);
+		m2 = Kekule.canonicalizer.canonicalize(m2, null);
+		m1 = Kekule.MolStandardizer.standardize(m1, { clearHydrogens: false });
+		m2 = Kekule.MolStandardizer.standardize(m2, { clearHydrogens: false });
+		//console.log("after standardizing");
+		//console.log(m1.nodes.map(v=> (v as Kekule.Atom).atomicNumber));
+		//console.log(m2.nodes.map(v=> (v as Kekule.Atom).atomicNumber))
+		let options = {
+			doStandardize: false,
+			extraComparisonProperties: ['canonicalizationIndex', 'bondOrder'],
+			method: Kekule.ComparisonMethod.CHEM_STRUCTURE,
+			clearHydrogens: false
+		};
+		return this.compare(m1, m2, options);
+		//return this.compare(m1,m1, options);
 		//return m1.compareStructure(m2, options); // replace this!
+	}
+
+
+
+	private compare(mol1: Kekule.Molecule, mol2: Kekule.Molecule, options: any) {
+		const U = Kekule.ObjComparer;
+		// const v1 = U.getCompareValue(mol1, options);
+		// const v2 = U.getCompareValue(mol2, options);
+		// let result =  v1 - v2;
+		let result = 0;
+		const resultObj: IComparisonResult = new ComparisonResult();
+		if (mol1 && mol2) {
+			if (result === 0)  // structure fragment, if with same node and connector count, compare nodes and connectors
+			{
+				var nodes1 = mol1.nodes; // obj1.getNodes();
+				var nodes2 = mol2.nodes; // obj2.getNodes();
+				result = nodes1.length - nodes2.length;
+				if (result === 0) {
+					for (var i = 0, l = nodes1.length; i < l; ++i) {
+						result = U.compare(nodes1[i], nodes2[i], options);
+						if (result !== 0) {
+							//console.log("result was non-zero for nodes");
+							//console.log(nodes1[i]);
+							//console.log(nodes2[i]); 
+							resultObj.nodeError = result;
+							resultObj.node = nodes2[i];
+							break;
+						} else {
+							//check lone pairs on current node
+							const lps1 = nodes1[i].getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
+							const lps2 = nodes2[i].getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
+							if (lps1.length !== lps2.length) {
+								resultObj.lonePairCountError = lps1.length - lps2.length;
+								resultObj.lonePairNodeError = nodes2[i];
+								break;
+							}
+
+							// Need to check stereochemistry per node.
+							// Since connectors are checked here anyways (i.e. node has error if wrong number of bonds)
+							// Standardization does NOT affect bond order by stereochemistry... so check it here.
+							const stereoListForNode1: Kekule.BondStereo[] = nodes1[i].getLinkedBonds().map(x => x.stereo).sort();
+							const stereoListForNode2: Kekule.BondStereo[] = nodes2[i].getLinkedBonds().map(x => x.stereo).sort();
+							// if (stereoListForNode1.length === stereoListForNode2.length){
+							// 	for (let i=0;i<stereoListForNode1.length;i++){
+							// 		if (stereoListForNode1[i] !== stereoListForNode2[i]){
+							// 			resultObj.connectorStereochemistryError ++;
+							// 			resultObj.node = nodes2[i];
+							// 		}
+							// 	}
+							// }
+
+						}
+
+					}
+				} else {
+					resultObj.nodeCountError = result;
+				}
+			}
+			if (result === 0)  // structure fragment, if with same node, connector, and lonepair count, compare nodes and connectors
+			{
+				var connectors1 = mol1.connectors; // obj1.getNodes();
+				var connectors2 = mol2.connectors; // obj2.getNodes();
+				result = connectors1.length - connectors2.length;
+				if (result === 0) {
+					for (var i = 0, l = connectors1.length; i < l; ++i) {
+						// NOT SURE WHAT THIS IS DOING DIFFERENTLY FROM OTHER CHECKS
+						// having a double bond in place of a single bond throws a nodeError (above) 
+						result = U.compare(connectors1[i], connectors2[i], options);
+						if (result !== 0) {
+							//console.log("result was non-zero for connectors");
+							resultObj.connectorError = result;
+							resultObj.connector = connectors2[i];
+							break;
+						}
+
+					}
+				} else {
+					resultObj.connectorCountError = result;
+				}
+			}
+			if (result === 0) {
+				mol1.clearExplicitBondHydrogens(true);
+				mol2.clearExplicitBondHydrogens(true);
+				var connectors1 = mol1.connectors; // obj1.getNodes();
+				var connectors2 = mol2.connectors; // obj2.getNodes();
+				// check for stereochemistry
+				const stereoListForMol1: Kekule.BondStereo[] = (mol1.connectors as Kekule.Bond[]).map(x => x.stereo).sort();
+				const stereoListForMol2: Kekule.BondStereo[] = (mol2.connectors as Kekule.Bond[]).map(x => x.stereo).sort();
+				if (stereoListForMol1.length === stereoListForMol2.length) {
+					for (let i = 0; i < stereoListForMol1.length; i++) {
+						if (stereoListForMol1[i] !== stereoListForMol2[i]) {
+							resultObj.connectorStereochemistryError++;
+						}
+					}
+				}
+			}
+
+		}
+		return resultObj;
 	}
 
 	public clearMolecule() {
@@ -530,11 +778,6 @@ export class LewisStructureCanvas extends FASTElement {
 		let drawnMolecule = this.drawMolecule(deserializedMolecule);
 		return drawnMolecule;
 	}
-
-
-
-
-
 
 
 	public drawMolecule(molecule: Kekule.Molecule, svg: Svg = this.mainSVG, scaleAndShift: boolean = false): Kekule.Molecule {
@@ -595,9 +838,6 @@ export class LewisStructureCanvas extends FASTElement {
 
 			// 	//svg.add(vertex);
 			verteces.set(atom, vertex);
-
-
-
 		}
 
 		for (let i = 0; i < molecule.getConnectorCount(); i++) {
@@ -638,11 +878,12 @@ export class LewisStructureCanvas extends FASTElement {
 
 		}
 
+		//draw all lone pairs
 		for (const [atom, vertex] of verteces) {
 
 			//console.log('getMarkersOfType error?');
 			let electronSets = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet, false);
-			console.log(electronSets);
+			//console.log(electronSets);
 			for (let m = 0; m < electronSets.length; m++) {
 				let electronSet = electronSets[m];
 				let vertexCenter = vertex.Position;
@@ -656,13 +897,14 @@ export class LewisStructureCanvas extends FASTElement {
 				}
 				let coordinationNumber = vertex.bondCount() + electronSets.length;
 				let newAngle = vertex.getAngleThatFits(coordinationNumber);
-				console.log(`ANGLE for coord ${coordinationNumber}: ${newAngle}`);
+				//console.log(`ANGLE for coord ${coordinationNumber}: ${newAngle}`);
 
 				let lonePair = new LonePair({
 					radians: newAngle,
 					owner: vertex,
 					molecule: molecule,
-					svg: this.mainSVG
+					svg: this.mainSVG,
+					electronSet: electronSet
 				});
 				vertex.addLonePair(lonePair);
 			}
@@ -680,7 +922,7 @@ export class LewisStructureCanvas extends FASTElement {
 	}
 
 	visibleElementSelectorChanged(oldValue: boolean, newValue: boolean) {
-		console.log('CHANGED: ' + newValue);
+		//console.log('CHANGED: ' + newValue);
 	}
 
 	connectedCallback() {
