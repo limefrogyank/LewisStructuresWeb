@@ -20,11 +20,12 @@ import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
 import './openbabel.js'
 import { Connector } from './connector';
-import { ComparisonResult, IComparisonResult, Position } from './interfaces';
+import { ComparisonResult, IComparisonOutput, IComparisonResult, Position } from './interfaces';
 import { LonePair } from './lonePair';
 
 import { Kekule as k } from 'kekule';
 import { mimeTests, samples } from './tests';
+import { negativeCircleSvg, positiveCircleSvg } from './svgs';
 k; //loads kekule stuff, prevents tree-shaking.
 
 declare global {
@@ -216,7 +217,12 @@ g:focus-visible{
 						r="2.3132887" />
 				</svg>
 			</fluent-button>
-			
+			<fluent-button appearance="outline" id='positive' class="electronButton" aria-label="Positive Formal Charge"
+				:innerHTML="${x=>positiveCircleSvg}">		
+			</fluent-button>
+			<fluent-button appearance="outline" id='negative' class="electronButton" aria-label="Negative Formal Charge" 
+				:innerHTML="${x=>negativeCircleSvg}">				
+			</fluent-button>
 		</div>
 
 		<div style="display:flex;margin-right:5px;" role="group" >
@@ -241,11 +247,13 @@ g:focus-visible{
 
 	<div role="toolbar" style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 		<div style="display:flex;margin-right:5px;">
-			<fluent-button appearance="outline" @click="${x => x.getMolecule()}">Load Molecule</fluent-button>
-			<fluent-button appearance="outline" @click="${x => x.getMime()}">Get Mime</fluent-button>
-			<fluent-text-field :value="${x => x.smiles}" @change="${(x, c) => x.smiles = (c.event.target as TextField).value ?? ''}"></fluent-text-field>
-			<fluent-button appearance="outline" @click="${x => x.compareMoleculeAsync(x.smiles)}" >Check Molecule</fluent-button>
+			<fluent-button appearance="outline" @click="${async x => console.log(await x.compareMoleculeAsync())}">Compare</fluent-button>
+			<fluent-button appearance="outline" @click="${x => console.log(x.getMolMime())}">Get MMime</fluent-button>
+			<fluent-button appearance="outline" @click="${x => console.log(x.getKekuleMime())}">Get KMime</fluent-button>
+			
+			<fluent-button appearance="outline" @click="${x => x.compareMoleculeAsync2(x.smiles)}" >Check Molecule</fluent-button>
 			<fluent-button appearance="outline" @click="${x => x.runTestsAsync()}">Run Tests</fluent-button>
+			<fluent-button appearance="outline" @click="${x => x.loadOne()}">Load One</fluent-button>
 		</div>
 	</div>
 <textarea >
@@ -267,16 +275,16 @@ ${x => x.debugString}
 // 	</fluent-menu>
 // </div>`;
 
-declare module 'fabric' {
-	export namespace fabric {
-		export interface ICanvasOptions {
-			enablePointerEvents: boolean;
-		}
-		export interface Canvas {
-			enablePointerEvents: boolean;
-		}
-	}
-}
+// declare module 'fabric' {
+// 	export namespace fabric {
+// 		export interface ICanvasOptions {
+// 			enablePointerEvents: boolean;
+// 		}
+// 		export interface Canvas {
+// 			enablePointerEvents: boolean;
+// 		}
+// 	}
+// }
 
 export var settingsService = new SettingsService();
 //settingsService.test = "setting new text";
@@ -317,7 +325,7 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr visibleElementSelector: boolean = false;
 
 	@observable debugString: string = "";
-	smiles: string;
+	@attr smiles: string;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;
@@ -358,6 +366,14 @@ export class LewisStructureCanvas extends FASTElement {
 
 	}
 
+	public async loadOne() {
+		this.molecule = new Kekule.Molecule();
+		let tempKekuleMolecule = await this.loadSmilesAsync('[CH3-]');
+		addLonePairsAndRedraw(tempKekuleMolecule, false);
+		this.clearMolecule();
+		this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
+	}
+
 	public async runTestsAsync() {
 		for (const mimeTest of mimeTests) {
 			this.molecule = new Kekule.Molecule();
@@ -370,20 +386,24 @@ export class LewisStructureCanvas extends FASTElement {
 				const moleculeToCompareWith = Kekule.IO.loadMimeData(unitTest.tryMatchWith, 'chemical/x-kekule-json');
 				const result = this.compareStructure(this.molecule, moleculeToCompareWith);
 				for (const key in result) {
-					if (result[key] !== unitTest.result[key]) {
-						console.log(`Test failed for ${mimeTest.smiles} and ${unitTest.tryMatchWith}`);
-						console.log(`Expected ${unitTest.result[key]} but got ${result[key]}`);
-						console.log(unitTest.result);
-						console.log(result);
-						console.log("Test Index: " + testIndex);
+					if (typeof result[key] !== "object"){
+						if (result[key] !== unitTest.result[key]) {
+							console.error(`%c KEY: ${key}`, `color: red;`);
+							console.error(`%c Test failed for ${mimeTest.smiles} and ${unitTest.tryMatchWith}`, `color: red;`);
+							console.error(`%c Expected ${unitTest.result[key]} but got ${result[key]}`, `color: red;`);
+							console.error(unitTest.result);
+							console.error(result);
+							console.error("%c Test Index: " + testIndex, `color: red;`);
+							break;
+						}
 					}
 				}
 				const badNodes = this.checkDashWedgeBonds(moleculeToCompareWith);
 				if (badNodes.length > 0 && unitTest.perspectiveTest.pass ) {
-					console.log(`For ${mimeTest.smiles}, index=${testIndex}, ${badNodes.length} node(s) did not have perspective drawn correctly.`);
-					console.log(badNodes);
+					console.error(`%cFor ${mimeTest.smiles}, index=${testIndex}, ${badNodes.length} node(s) did not have perspective drawn correctly.`, `color: red;`);
+					console.error(badNodes);
 				} else if (badNodes.length === 0 && !unitTest.perspectiveTest.pass) {
-					console.log(`For ${mimeTest.smiles}, index=${testIndex}, molecule should have failed the perspective test, but did not.`);
+					console.warn(`For ${mimeTest.smiles}, index=${testIndex}, molecule should have failed the perspective test, but did not. `);
 				}
 				testIndex++;
 			}
@@ -391,11 +411,39 @@ export class LewisStructureCanvas extends FASTElement {
 
 			//const compareResult = await this.compareMoleculeAsync(sample);
 			let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-kekule-json');
-			let svg = this.exportSVG();
+			let svg = this.getSVG();
 			let smiles = Kekule.IO.saveFormatData(this.molecule, 'smi');
 			this.debugString += await this.exportCanonicalSmilesAsync(this.molecule);
 			this.debugString += "\n\n";
 		}
+	}
+
+	public async compareMoleculeAsync():Promise<IComparisonOutput>{
+		const output :IComparisonOutput={};
+		if (this.molecule == null) {
+			output.empty=true;
+			return output;
+		}
+		if (this.smiles == "" || this.smiles == null){
+			output.programError = "Missing SMILES to compare molecule to.";
+			const smiles = await this.getSMILESAsync();
+			console.log(smiles);
+			return output;
+		}
+		if (this.smiles !== ""){
+			let molToCompareWith = await this.loadSmilesAsync(this.smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
+			addLonePairsAndRedraw(molToCompareWith, false);
+			
+			const compareResult = this.compareStructure(this.molecule, molToCompareWith);
+			const badNodes = this.checkDashWedgeBonds(molToCompareWith);
+		}
+				//console.log(result);
+		const smiles = await this.getSMILESAsync();
+		if (smiles !== "" && smiles !== null){
+			output.smiles = smiles;
+		}
+		
+		return output;
 	}
 
 	public async getMolecule(): Promise<string> {
@@ -412,21 +460,76 @@ export class LewisStructureCanvas extends FASTElement {
 		console.log(clone);
 		this.molecule = this.drawMolecule(clone, this.mainSVG, true);
 
-		let compareResult = await this.compareMoleculeAsync(samples[index]);
+		let compareResult = await this.compareMoleculeAsync2(samples[index]);
 		console.log(`They match?  ${compareResult}`);
 		//Kekule.IO.loadFormatData
 
 		let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-kekule-json');
 
-		let svg = this.exportSVG();
+		let svg = this.getSVG();
 		return mime;
 	}
 
-	public getMime() {
+	private verifyElectronCount(): boolean {
+		if (this.molecule == null) {
+			return false;
+		}
+		let atoms = this.molecule.nodes.filter(x=>x instanceof Kekule.Atom).map(x=> x as Kekule.Atom);
+		let lonePairElectrons = 0;
+		for (const atom of atoms) {
+			const lonePairs = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
+			lonePairElectrons += lonePairs.length*2;
+		}
+		let bonds = this.molecule.connectors.filter(x=>x instanceof Kekule.Bond).map(x=> x as Kekule.Bond);
+		let bondElectrons = 0;
+		for (const bond of bonds) {
+			bondElectrons += bond.bondOrder*2;
+		}
+
+		let electronCount = 0;
+		for (const atom of atoms) {
+			electronCount += atom.getValence({ignoreCharge: true});
+		}
+
+		//while the getValence function adjusts the valence based on the charge, it won't account for whether a lone pair 
+		//is present or not.  So, instead we ignore the charge and add or subtract electrons manually. (just like how we teach!)
+
+		for (const atom of atoms) {
+			const charges = atom.getMarkersOfType(Kekule.ChemMarker.Charge);
+			for (const charge of charges) {
+				electronCount -= charge.value;  //negative charge adds an electron
+			}
+		}
+
+		return electronCount === (lonePairElectrons + bondElectrons);
+	}
+
+	private async getSMILESAsync(){
+		if (this.molecule == null) {
+			return "";
+		}
+		if (!this.verifyElectronCount()){
+			console.warn("Not a valid Lewis structure");
+			return "";
+		}
+		let smiles = await this.exportCanonicalSmilesAsync(this.molecule);
+		//let smiles = Kekule.IO.saveFormatData(this.molecule, 'smi');
+		return smiles;
+	}
+
+	public getKekuleMime() {
 		if (this.molecule == null) {
 			return "";
 		}
 		let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-kekule-json');
+		return mime;
+	}
+
+	public getMolMime() {
+		if (this.molecule == null) {
+			return "";
+		}
+		let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-mdl-molfile');
 		console.log(mime);
 		return mime;
 	}
@@ -481,12 +584,12 @@ export class LewisStructureCanvas extends FASTElement {
 		});
 	}
 
-	public exportSVG(): string {
+	public getSVG(): string {
 		let svg = this.mainSVG.node.outerHTML;
 		return svg;
 	}
 
-	public async compareMoleculeAsync(smiles: string): Promise<boolean> {
+	public async compareMoleculeAsync2(smiles: string): Promise<boolean> {
 		if (this.molecule == null) {
 			return false;
 		}
@@ -961,6 +1064,10 @@ export class LewisStructureCanvas extends FASTElement {
 
 		// click is acting weird, can't prevent it with stopPropagation
 		this.mainSVG.mousedown((ev: MouseEvent) => {
+			if (ev.button != 0){
+				ev.preventDefault();
+				return;
+			}
 			// if (ev.defaultPrevented){
 			// 	return;
 			// }

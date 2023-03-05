@@ -235,6 +235,12 @@ declare module Kekule {
 		setMassNumber(massNumber: number): Atom;
 		setIsotopeId(isotopeId: string): Atom;
 
+		getCharge():number;
+		setCharge(charge:number):void;
+
+		getValence(options?:any): number;
+		getImplicitValence(): number;
+		getExplicitValence(): number;
 		//canvasVertex: Vertex;
 	}
 	export class Psuedoatom extends AbstractAtom {
@@ -333,7 +339,7 @@ declare module Kekule {
 		}
 
 		export class Charge extends ChemPropertyMarker {
-
+			coord2D: Coordinates2D;
 		}
 
 		export class UnbondedElectronSet extends BaseMarker {

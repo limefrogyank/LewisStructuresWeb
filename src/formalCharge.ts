@@ -8,18 +8,21 @@ import { SVG, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle a
 	from '@svgdotjs/svg.js';
 import { IDisposable, Position } from './interfaces';
 import { hoverColor } from './constants';
+import { LonePair } from './lonePair';
 
-export interface ILonePairOptions {
+export interface IFormalChargeOptions {
 	owner: Vertex;
 	radians?: number;
 	molecule: Kekule.Molecule;
 	svg: Svg;
-	electronSet: Kekule.ChemMarker.UnbondedElectronSet
+	charge: Kekule.ChemMarker.Charge
 }
 
-export class LonePair implements IDisposable {
+export class FormalCharge implements IDisposable {
 
-	static dotRadius: number = 3;
+    static circleRadius: number = 6;
+	static chargeDistance: number = 5;
+
 	//static longRadius: number = 15;
 	static extraMargin: number = 2; //8
 
@@ -28,8 +31,8 @@ export class LonePair implements IDisposable {
 
 	private _svg: Svg;
 	private _group: SvgGroup;
-	private _circle1: SvgCircle;
-	private _circle2: SvgCircle;
+	private _circle: SvgCircle;
+	private _text: SvgText;
 	private _selectionEllipse: SvgEllipse;
 	public radians: number;
 
@@ -40,23 +43,41 @@ export class LonePair implements IDisposable {
 	public Position$: Observable<Position>;
 
 	private _molecule: Kekule.Molecule;
-	private _electrons: Kekule.ChemMarker.UnbondedElectronSet;
+	private _charge: Kekule.ChemMarker.Charge;
 
-	constructor(options: ILonePairOptions) {
-
-		// options.originX = 'center'; 
-		// options.originY = 'center';
-		// options.selectable=false;
-		// options.lockMovementX=true;
-		// options.lockMovementY=true;
-		// options.hasControls=false;
-		// options.hoverCursor=settingsService.eraserCursor;
+	constructor(options: IFormalChargeOptions) {
 
 		this._svg = options.svg;
-		this._group = this._svg.group().attr("aria-label", "Lone Pair");
-		this._circle1 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(Vertex.circleRadius / 3).fill('#000000');
-		this._circle2 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(-Vertex.circleRadius / 3).fill('#000000');
-		this._selectionEllipse = this._group.ellipse(LonePair.extraMargin * 2, Vertex.circleRadius * 2)
+        // this._svg.circle(FormalCharge.circleRadius * 2)
+        //     .cx(0)
+        //     .cy(FormalCharge.chargeDistance)
+        //     .stroke('#000000')
+        //     .fill('#ffffff')
+        //     .attr({'stroke-width':1}) ;
+		// this._svg.text(options.charge.value.toString())
+        //     .font({size:8})
+        //     .x(0)
+        //     .cy(FormalCharge.chargeDistance )
+        //     .stroke('#000000')
+            
+        //     .attr({'text-anchor':'middle', 'alignment-baseline':'middle'});
+
+
+		this._group = this._svg.group().attr("aria-label", "Formal Charge");
+		this._circle = this._group.circle(FormalCharge.circleRadius * 2)
+            .cx(0)
+            .cy(FormalCharge.chargeDistance)
+            .stroke('#000000')
+            .fill('#ffffff')
+            .attr({'stroke-width':0.5}) ;
+		this._text = this._group.text(this.numberToCharge(options.charge.value))
+            .font({size:9, family:'sans-serif'})
+            .x(0)
+            .cy(FormalCharge.chargeDistance )
+            //.stroke('#000000')
+            .attr({'text-anchor':'middle', 'alignment-baseline':'middle'});
+		
+        this._selectionEllipse = this._group.ellipse(LonePair.extraMargin * 2, Vertex.circleRadius * 2)
 			.cx(0).cy(0).rotate(this.radians).attr({ 'fill-opacity': 0 })
 			.stroke({ color: hoverColor, width: 1, opacity: 0 })
 			.filterWith((add) => {
@@ -67,35 +88,12 @@ export class LonePair implements IDisposable {
 		this.radians = options.radians != null ? options.radians : 0;
 		this._molecule = options.molecule;
 		//this._electrons = new Kekule.ChemMarker.UnbondedElectronSet();
-		this._electrons = options.electronSet;
+		this._charge = options.charge;
 		//this.owner.atom.appendMarker(this._electrons);  // GOING TO ADD LONE PAIR TO KEKULE MODEL BEFORE USING THIS CLASS.
 		
 		this.moveUsingRadians(this.radians);
-		// let selectionEllipse = new fabric.Ellipse({
-		// 	rx:LonePair.shortRadius,
-		// 	ry:LonePair.longRadius,
-		// 	stroke:'black',
-		// 	fill:'transparent',
-		// 	strokeDashArray: [5,5],
-		// 	strokeWidth:2,
-		// 	originX:'center',
-		// 	originY:'center',
-		// 	evented:true,
-		// 	hoverCursor:'null',
-		// 	opacity:0
-		// });
-
-
-		//super([selectionEllipse,circle1,circle2],options);
 		
-		// this._circle1 = circle1;
-		// this._circle2 = circle2;
-		// this._selectionEllipse=selectionEllipse;
-
-		
-
-		
-		//this._electrons.canvasLonePair = this;
+        
 
 
 		this._ownerSubscription = this.owner.Position$.subscribe(position => {
@@ -105,26 +103,17 @@ export class LonePair implements IDisposable {
 			//console.log(this.radians);
 			let vect: Position = { x: Math.cos(this.radians), y: Math.sin(this.radians) };
 
-
+            
 
 			this._group
 				.untransform()
 				.rotate(this.radians / Math.PI / 2 * 360)
 				.translate(position.x, position.y)
 				.translate(vect.x * (LonePair.extraMargin + Vertex.circleRadius), vect.y * (LonePair.extraMargin + Vertex.circleRadius));
-			// this._group
-			// 	.transform({
-			// 		rotate: this.radians,
-			// 		translateX: position.x + (vect.x * (LonePair.shortRadius + Vertex.circleRadius)), 
-			// 		translateY: position.y + (vect.y * (LonePair.shortRadius + Vertex.circleRadius))});
-			// this._group2.transform({
-			// 		translateX: position.x,
-			// 		translateY: position.y
-			// 	});
-			// this._group.transform({
-			// 	rotate: this.radians
-			// });
-			this._electrons.coord2D = {
+			
+            
+
+			this._charge.coord2D = {
 				x: position.x + (vect.x * (LonePair.extraMargin + Vertex.circleRadius)),
 				y: position.y + (vect.y * (LonePair.extraMargin + Vertex.circleRadius))
 			};
@@ -141,16 +130,36 @@ export class LonePair implements IDisposable {
 
 	}
 
+    private numberToCharge(number: number): string {
+        if (number == 0) {
+            return "";
+        } else if (number == 1){
+            return "+";
+        } else if (number == -1){
+            return "-"
+        } else if (number > 1){
+            return  number.toString() + "+";
+        } else {
+            return Math.abs(number).toString() + "-";
+        }
+    
+    }
+
+    public updateCharge(charge: number) {
+        this._text.text(this.numberToCharge(charge));
+    }
+
 	public updateKekulePosition(x: number, y: number) {
-		this._electrons.coord2D = { x: x, y: y };
+		this._charge.coord2D = { x: x, y: y };
 	}
 
 	
 	dispose() {
-		this.owner.atom.removeMarker(this._electrons);
+        this.owner.removeAttachment(this);
+		this.owner.atom.removeMarker(this._charge);
 
-		this._circle1.remove();
-		this._circle2.remove();
+		this._circle.remove();
+		this._text.remove();
 		this._group.remove();
 	}
 
@@ -196,7 +205,10 @@ export class LonePair implements IDisposable {
 				.translate(vertexCenter.x, vertexCenter.y)
 				.translate(normVect.x * (LonePair.extraMargin + Vertex.circleRadius), normVect.y * (LonePair.extraMargin + Vertex.circleRadius));
 
-			this._electrons.coord2D = { x: vertexCenter.x + (normVect.x * (LonePair.extraMargin + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.extraMargin + Vertex.circleRadius)) };
+            this._text.untransform();
+            this._text.rotate(-this.radians / Math.PI / 2 * 360);
+
+			this._charge.coord2D = { x: vertexCenter.x + (normVect.x * (LonePair.extraMargin + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.extraMargin + Vertex.circleRadius)) };
 		} else {
 			// this._tempLine.setLineEndpoint(canvasCoords.x, canvasCoords.y);
 
@@ -218,7 +230,7 @@ export class LonePair implements IDisposable {
 			.translate(vertexCenter.x, vertexCenter.y)
 			.translate(normVect.x * (LonePair.extraMargin + Vertex.circleRadius), normVect.y * (LonePair.extraMargin + Vertex.circleRadius));
 
-		this._electrons.coord2D = { x: vertexCenter.x + (normVect.x * (LonePair.extraMargin + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.extraMargin + Vertex.circleRadius)) };
+		this._charge.coord2D = { x: vertexCenter.x + (normVect.x * (LonePair.extraMargin + Vertex.circleRadius)), y: vertexCenter.y + (normVect.y * (LonePair.extraMargin + Vertex.circleRadius)) };
 	}
 
 	public moveUsingRadians(radians:number){
@@ -234,7 +246,7 @@ export class LonePair implements IDisposable {
 			.translate(center.x, center.y)
 			.translate(normx * (LonePair.extraMargin + Vertex.circleRadius), normy * (LonePair.extraMargin + Vertex.circleRadius));
 
-		this._electrons.coord2D = { 
+		this._charge.coord2D = { 
 			x: center.x + (normx * (LonePair.extraMargin + Vertex.circleRadius)), 
 			y: center.y + (normy * (LonePair.extraMargin + Vertex.circleRadius)) 
 		};

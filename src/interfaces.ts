@@ -7,6 +7,12 @@ export interface Position {
 	y: number;
 }
 
+export interface IComparisonOutput{
+	programError?: string;
+	empty?:boolean;
+	smiles?:string;
+}
+
 export interface IComparisonResult {
 	node: Kekule.ChemStructureNode|null;
 	nodeError: number;

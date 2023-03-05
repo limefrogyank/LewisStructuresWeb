@@ -21,11 +21,15 @@ provideFASTDesignSystem()
 		fastButton()
 	);
 
-export function getMolecule(lewisStructureCanvas: LewisStructureCanvas){
-	lewisStructureCanvas.getMolecule();
-}
+// export function getMolecule(lewisStructureCanvas: LewisStructureCanvas){
+// 	lewisStructureCanvas.getMolecule();
+// }
+// export function getSVG(lewisStructureCanvas: LewisStructureCanvas){
+// 	lewisStructureCanvas.getMolecule();
+// }
 
-(window as any).getMolecule = getMolecule;
+
+//(window as any).getMolecule = getMolecule;
 export var settingsService = new SettingsService();
 
 

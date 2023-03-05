@@ -14,7 +14,9 @@ export enum BondType{
 	triple,
 	solid,
 	dashed,
-	lonePair
+	lonePair,
+	positive,  	// this is a formal charge
+	negative	// this is a formal charge
 }
 
 export class SettingsService {

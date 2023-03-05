@@ -1,4 +1,3 @@
-import { copiedTextStyle } from "fabric/fabric-impl";
 import { Vertex, IVertexOptions } from "./vertex";
 import { settingsService } from './lewisStructureCanvas';
 import { BondType } from './service/settingsService';

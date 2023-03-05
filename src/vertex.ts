@@ -10,6 +10,7 @@ import { SVG, ForeignObject as SvgForeignObject, Circle as SvgCircle, G as SvgGr
 import { IDisposable, Position } from './interfaces';
 import { LonePair } from './lonePair';
 import { hoverColor } from './constants';
+import { FormalCharge } from './formalCharge';
 
 
 export interface IVertexOptions {
@@ -367,6 +368,10 @@ export class Vertex implements IDisposable {
 	}
 
 	mouseDown(ev: MouseEvent) {
+		if (ev.button != 0){
+			ev.preventDefault();
+			return;
+		}
 		ev.stopPropagation();
 		this._hasMoved = false;
 
@@ -403,6 +408,9 @@ export class Vertex implements IDisposable {
 					if (this.attachments[i] instanceof LonePair) {
 						let lonePair = this.attachments[i] as LonePair;
 						angles.push(lonePair.radians);
+					} else if (this.attachments[i] instanceof FormalCharge) {
+						let formalCharge = this.attachments[i] as FormalCharge;
+						angles.push(formalCharge.radians);
 					} else {
 						// it's a connector, find the attached angle
 						let connector = this.attachments[i] as Connector;
@@ -423,6 +431,41 @@ export class Vertex implements IDisposable {
 				});
 
 				this.attachments.push(this._tempLP);
+			} else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
+				let chargeMarker : Kekule.ChemMarker.Charge;
+				let chargeSVG : FormalCharge|null = null;
+				const markers = this.atom.getMarkersOfType(Kekule.ChemMarker.Charge);
+				if (markers != null && markers.length > 0) {
+					chargeMarker = markers[0];
+					chargeSVG = this.attachments.find(a => a instanceof FormalCharge) as FormalCharge;
+				} else {
+					chargeMarker = new Kekule.ChemMarker.Charge();
+					this.atom.appendMarker(chargeMarker);
+					chargeMarker.value = 0;
+				}
+				chargeMarker.value += settingsService.currentBondType == BondType.positive ? 1 : -1;
+				this.atom.setCharge(chargeMarker.value);
+				console.log(chargeMarker.value);
+				if (chargeMarker.value == 0){
+					//this.atom.removeMarker(chargeMarker);
+					if (chargeSVG != null){
+						chargeSVG.dispose();
+					}
+				} else {
+					if (chargeSVG == null){
+						chargeSVG = new FormalCharge({
+							owner: this,
+							molecule: this._molecule,
+							svg: this._svg,
+							charge: chargeMarker, 
+							radians: 0
+						});
+						this.attachments.push(chargeSVG);
+					} else {
+						chargeSVG.updateCharge(chargeMarker.value);
+					}
+				}
+				
 
 			} else {
 
@@ -481,7 +524,8 @@ export class Vertex implements IDisposable {
 		if (settingsService.currentBondType == BondType.lonePair) {
 				
 				// this.updateAriaLabel();
-
+		}else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
+			// this.updateAriaLabel( 
 		} else {
 
 			//Re-enable events 
@@ -618,7 +662,8 @@ export class Vertex implements IDisposable {
 				
 				let canvasCoords : Position = {x:ev.clientX-bounds.left,y:ev.clientY-bounds.top};
 				this._tempLP.moveUsingCoord(canvasCoords);
-
+			} else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
+				// this.updateAriaLabel(  
 			} else {
 
 				// console.log("X: " + (ev.clientX - bounds.left - old.translateX).toString() + ",  Y: " + (ev.clientY - bounds.top - old.translateY).toString());
@@ -860,6 +905,9 @@ export class Vertex implements IDisposable {
 			if (this.attachments[i] instanceof LonePair) {
 				let lonePair = this.attachments[i] as LonePair;
 				angles.push(lonePair.radians);
+			} else if (this.attachments[i] instanceof FormalCharge) {
+				let formalCharge = this.attachments[i] as FormalCharge;
+				angles.push(formalCharge.radians);
 			} else {
 				// it's a connector, find the attached angle
 				let connector = this.attachments[i] as Connector;
