@@ -1,31 +1,24 @@
 
-import { FASTElement, customElement, attr, html, ref, observable, Observable } from '@microsoft/fast-element';
+import { FASTElement, customElement, attr, html, ref, observable, Observable, when } from '@microsoft/fast-element';
 import { PeriodicTableModal } from './periodicTableModal';
 import { Vertex } from './vertex';
 import { InteractionMode, SettingsService, BondType } from './service/settingsService';
 import { provideFluentDesignSystem, fluentButton, fluentTextField, fluentDialog, fluentMenu, fluentMenuItem } from '@fluentui/web-components';
-//import { Kekule } from './kekuleTypings';
-//import * as k from './kekule/dist/kekule.min.js';
 import * as obm from './kekule/dist/extra/openbabel.js';
-//import { Connector } from './connector';
-//import { LonePair } from './lonePair';
 import { Button, TextField } from '@fluentui/web-components';
-//import * as openchemlib from 'openchemlib';
 import { obMolToCAN, obMolToKekule } from './openBabelStuff';
-//import * as raph from 'raphael';
-import { generateTerminalTetrahedralVectors, getAverageBondLength, getBondAngle, getTetrahedralVectors, getTrigonalPlanarVectors } from './angles';
 import { addLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
 import './openbabel.js'
 import { Connector } from './connector';
-import { ComparisonResult, IComparisonOutput, IComparisonResult, Position } from './interfaces';
+import { BlindOutput, ComparisonOutput, ComparisonResult, IBlindOutput, IComparisonOutput, IComparisonResult, Position } from './interfaces';
 import { LonePair } from './lonePair';
-
 import { Kekule as k } from 'kekule';
 import { mimeTests, samples } from './tests';
 import { negativeCircleSvg, positiveCircleSvg } from './svgs';
+import { getValence } from './valence';
 k; //loads kekule stuff, prevents tree-shaking.
 
 declare global {
@@ -132,6 +125,7 @@ g:focus-visible{
 	outline: -webkit-focus-ring-color auto 5px;
 }
 </style>
+${when(x=>!x.readonly, html<LewisStructureCanvas>`
 	<div role="toolbar" ${ref("toolbarDiv")} style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 
 		<div style="display:flex;margin-right:5px;">
@@ -141,8 +135,8 @@ g:focus-visible{
 		</div>
 
 		<div style="display:flex;margin-right:5px;" class="btn-group me-2" role="group" >
-			<fluent-button apearance="neutral" class="elementButton" ${ref("periodicTableButton")} 
-				@click="${(x, c) => { x.visibleElementSelector = !x.visibleElementSelector; console.log("CLICKED"); }}"
+			<fluent-button apearance="outline" class="elementButton" ${ref("periodicTableButton")} 
+				@click="${(x, c) => { x.visibleElementSelector = !x.visibleElementSelector; }}"
 				aria-label="Element Selector">
 				Element Select
 			</fluent-button>
@@ -225,12 +219,15 @@ g:focus-visible{
 			</fluent-button>
 		</div>
 
+		${when(x=>x.debug, html<LewisStructureCanvas>`
 		<div style="display:flex;margin-right:5px;" role="group" >
 			<fluent-button appearance="${x => x.settingsService.readAloudAtoms ? "accent" : "outline"}" class="readAloudButton" ${ref("readAloudButton")} aria-label="Read aloud toggle">
 				🔊&#xFE0E;
 			</fluent-button>
 		</div>
+		`)}
 	</div>
+	`)}
 	<div id='svgContainer' ${ref("svgContainer")} style='width:${x => x.width}px;height:${x => x.height}px;border:black solid 1px;user-select:none;'>
 
 	</div>
@@ -244,7 +241,7 @@ g:focus-visible{
 		@dismiss="${x => x.dismissPeriodicTable()}"
 	>
 	</periodic-table-modal>
-
+${when(x=>x.debug, html<LewisStructureCanvas>`
 	<div role="toolbar" style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 		<div style="display:flex;margin-right:5px;">
 			<fluent-button appearance="outline" @click="${async x => console.log(await x.compareMoleculeAsync())}">Compare</fluent-button>
@@ -256,10 +253,11 @@ g:focus-visible{
 			<fluent-button appearance="outline" @click="${x => x.loadOne()}">Load One</fluent-button>
 		</div>
 	</div>
+
 <textarea >
 ${x => x.debugString}
 </textarea>
-
+`)}
 </fluent-design-system-provider>
 `;
 
@@ -326,6 +324,10 @@ export class LewisStructureCanvas extends FASTElement {
 
 	@observable debugString: string = "";
 	@attr smiles: string;
+	@attr({mode:'boolean'}) readonly: boolean = false;
+	
+
+	debug:boolean=false;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;
@@ -364,6 +366,13 @@ export class LewisStructureCanvas extends FASTElement {
 		this.settingsService = settingsService;
 		this.molecule = new Kekule.Molecule();
 
+	}
+
+	public async loadMoleculeUsingSmilesAsync(smiles: string) {
+		let tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		addLonePairsAndRedraw(tempKekuleMolecule, false);
+		this.clearMolecule();
+		this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
 	}
 
 	public async loadOne() {
@@ -418,29 +427,70 @@ export class LewisStructureCanvas extends FASTElement {
 		}
 	}
 
-	public async compareMoleculeAsync():Promise<IComparisonOutput>{
-		const output :IComparisonOutput={};
+	public async getBlindOutputAsync(): Promise<IBlindOutput> {
 		if (this.molecule == null) {
-			output.empty=true;
-			return output;
+			return new BlindOutput({programError: "No structure has been loaded."});
+		}
+		const smiles = await this.exportCanonicalSmilesAsync(this.molecule);
+		if (smiles == null || smiles == "") {
+			return new BlindOutput({empty:true, programError: "Structure does not correspond to correct any valid structure."});
+		}
+		
+		const output: IBlindOutput = new BlindOutput({smiles: smiles});
+		const badNodes = this.checkDashWedgeBonds(this.molecule);
+		if (badNodes.length > 0) {
+			output.programError = "Perspective is not drawn correctly.";
+			output.perspectiveCorrect=false;
+			output.perspectiveErrorAtom = badNodes.map(x=>x.symbol);
+		}
+
+		// create kekule structure for smiles determined, add lone pairs, and compare with original
+		const tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		addLonePairsAndRedraw(tempKekuleMolecule, false);
+		const comparisonResult = this.compareStructure(this.molecule, tempKekuleMolecule);
+		output.blindComparisonResult = ComparisonResult.toStringOutput(comparisonResult);
+		if (output.blindComparisonResult.lonePairCountError) {
+			if (output.programError !== ""){
+				output.programError += "\n";
+			}
+			output.programError += "Lone pairs are not drawn correctly.";
+		}
+
+		return output;
+	}
+
+
+
+	public checkPerspective():boolean{
+		if (this.molecule == null) {
+			return false;
+		}
+		const badNodes = this.checkDashWedgeBonds(this.molecule);
+		if (badNodes.length > 0) {
+			return false;
+		}
+		return true;
+	}
+
+	public async compareMoleculeAsync():Promise<IComparisonOutput>{
+		if (this.molecule == null) {
+			return new ComparisonOutput({empty:true});
 		}
 		if (this.smiles == "" || this.smiles == null){
-			output.programError = "Missing SMILES to compare molecule to.";
-			const smiles = await this.getSMILESAsync();
-			console.log(smiles);
-			return output;
+			return new ComparisonOutput({programError: "Missing SMILES to compare molecule to."});
 		}
-		if (this.smiles !== ""){
-			let molToCompareWith = await this.loadSmilesAsync(this.smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
-			addLonePairsAndRedraw(molToCompareWith, false);
-			
-			const compareResult = this.compareStructure(this.molecule, molToCompareWith);
-			const badNodes = this.checkDashWedgeBonds(molToCompareWith);
-		}
-				//console.log(result);
-		const smiles = await this.getSMILESAsync();
-		if (smiles !== "" && smiles !== null){
-			output.smiles = smiles;
+
+		let output :IComparisonOutput = new ComparisonOutput({smiles: this.smiles});
+
+		let molToCompareWith = await this.loadSmilesAsync(this.smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
+		addLonePairsAndRedraw(molToCompareWith, false);
+		
+		output.comparisonResult = ComparisonResult.toStringOutput(this.compareStructure(this.molecule, molToCompareWith));
+		
+		const badNodes = this.checkDashWedgeBonds(this.molecule);
+		if (badNodes.length > 0) {
+			output.perspectiveCorrect = false;
+			output.perspectiveErrorAtom = badNodes.map(x=>x.symbol);
 		}
 		
 		return output;
@@ -488,7 +538,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 		let electronCount = 0;
 		for (const atom of atoms) {
-			electronCount += atom.getValence({ignoreCharge: true});
+			electronCount += getValence(atom); // atom.getValence({ignoreCharge: true});
 		}
 
 		//while the getValence function adjusts the valence based on the charge, it won't account for whether a lone pair 
@@ -506,14 +556,13 @@ export class LewisStructureCanvas extends FASTElement {
 
 	private async getSMILESAsync(){
 		if (this.molecule == null) {
-			return "";
+			return "empty";
 		}
 		if (!this.verifyElectronCount()){
 			console.warn("Not a valid Lewis structure");
-			return "";
+			return "invalid";
 		}
 		let smiles = await this.exportCanonicalSmilesAsync(this.molecule);
-		//let smiles = Kekule.IO.saveFormatData(this.molecule, 'smi');
 		return smiles;
 	}
 
@@ -532,6 +581,11 @@ export class LewisStructureCanvas extends FASTElement {
 		let mime = Kekule.IO.saveMimeData(this.molecule, 'chemical/x-mdl-molfile');
 		console.log(mime);
 		return mime;
+	}
+
+	public loadKekule(kekule: string) {
+		this.molecule = Kekule.IO.loadMimeData(kekule, 'chemical/x-kekule-json');
+		this.drawMolecule(this.molecule, this.mainSVG, true);
 	}
 
 	private loadSmilesAsync(smiles: string): Promise<Kekule.Molecule> {
@@ -738,7 +792,7 @@ export class LewisStructureCanvas extends FASTElement {
 		return badStereoNodes;
 	}
 
-	private compareStructure(mol1: Kekule.Molecule, mol2: Kekule.Molecule): ComparisonResult {
+	private compareStructure(mol1: Kekule.Molecule, mol2: Kekule.Molecule): IComparisonResult<Kekule.Atom,Kekule.Bond> {
 		let m1 = mol1.clone();
 		let m2 = mol2.clone();
 		//m1.setCanonicalizationIndex(null);
@@ -769,7 +823,7 @@ export class LewisStructureCanvas extends FASTElement {
 		// const v2 = U.getCompareValue(mol2, options);
 		// let result =  v1 - v2;
 		let result = 0;
-		const resultObj: IComparisonResult = new ComparisonResult();
+		const resultObj: IComparisonResult<Kekule.Atom,Kekule.Bond> = new ComparisonResult();
 		if (mol1 && mol2) {
 			if (result === 0)  // structure fragment, if with same node and connector count, compare nodes and connectors
 			{
@@ -784,7 +838,7 @@ export class LewisStructureCanvas extends FASTElement {
 							//console.log(nodes1[i]);
 							//console.log(nodes2[i]); 
 							resultObj.nodeError = result;
-							resultObj.node = nodes2[i];
+							resultObj.node = nodes2[i] as Kekule.Atom;
 							break;
 						} else {
 							//check lone pairs on current node
@@ -792,7 +846,7 @@ export class LewisStructureCanvas extends FASTElement {
 							const lps2 = nodes2[i].getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
 							if (lps1.length !== lps2.length) {
 								resultObj.lonePairCountError = lps1.length - lps2.length;
-								resultObj.lonePairNodeError = nodes2[i];
+								resultObj.lonePairNodeError = nodes2[i] as Kekule.Atom;
 								break;
 							}
 
@@ -830,7 +884,7 @@ export class LewisStructureCanvas extends FASTElement {
 						if (result !== 0) {
 							//console.log("result was non-zero for connectors");
 							resultObj.connectorError = result;
-							resultObj.connector = connectors2[i];
+							resultObj.connector = connectors2[i] as Kekule.Bond;
 							break;
 						}
 
@@ -1033,33 +1087,19 @@ export class LewisStructureCanvas extends FASTElement {
 		this.mainSVG = SVG();
 		this.mainSVG.addTo(this.svgContainer);
 		this.mainSVG.size(this.width, this.height);
-
+		this.mainSVG.on('change', (e: any) => {
+			this.$emit('change', e);
+		});
 
 
 		let onResize = this.onResize.bind(this);
 		window.onresize = onResize;
 
-		// this.mainCanvas.width  = this.width;
-		// this.mainCanvas.height = this.height;
-
 		settingsService.keyboardDiv = this.keyboardDiv;
 
-		// this.fabricCanvas = new fabric.Canvas(this.mainCanvas, {
-		// 	// width: this.clientWidth,
-		// 	// height: this.clientHeight,
-		// 	width: this.width,
-		// 	height:this.height,  //square
-		// 	selection: false,
-		// 	enablePointerEvents: true
-
-		// });
-
-		// this.invisibleFabricCanvas = new fabric.Canvas(this.invisibleCanvas,{
-		// 	width: this.width,
-		// 	height:this.height,  //square
-		// 	selection: false,
-		// 	enablePointerEvents: false
-		// });
+		if (this.readonly){
+			settingsService.setDrawMode(InteractionMode.none);
+		}
 
 
 		// click is acting weird, can't prevent it with stopPropagation
@@ -1068,22 +1108,7 @@ export class LewisStructureCanvas extends FASTElement {
 				ev.preventDefault();
 				return;
 			}
-			// if (ev.defaultPrevented){
-			// 	return;
-			// }
-
-			// 	if (this.molecule == null){
-			// 		return;
-			// 	}
-			// 	if (ev.pointer == null){
-			// 		return;
-			// 	}
-			// 	// console.log('window pointerdown');
-			//if ((ev.target === null ) && settingsService.isDrawMode){
-			// 		// console.log(ev.target)
-			// 		// console.log('window pointerdown no target');
-			// 		// let canvasCoords = _canvas.getPointer(ev);
-			//console.log("CLICK FROM MAIN!");
+		
 			if (settingsService.isDrawMode && this.molecule != null) {
 				const bounds = this.mainSVG.node.getBoundingClientRect();
 				var vertex = new Vertex({
@@ -1095,12 +1120,7 @@ export class LewisStructureCanvas extends FASTElement {
 				});
 			}
 		});
-		// 		this.fabricCanvas.add(vertex);
-		// 	} else {
-		// 		console.log(ev.target);
-		// 	}
-
-		// });
+		
 
 		if (this.shadowRoot != null) {
 			let modeButtons = this.shadowRoot.querySelectorAll<Button>(".toolButton");
@@ -1142,9 +1162,11 @@ export class LewisStructureCanvas extends FASTElement {
 			// 	}
 			// }
 
-			this.readAloudButton.onclick = (ev) => {
-				settingsService.readAloudAtoms = !settingsService.readAloudAtoms;
-			};
+			if (this.readAloudButton != null){
+				this.readAloudButton.onclick = (ev) => {
+					settingsService.readAloudAtoms = !settingsService.readAloudAtoms;
+				};
+			}
 
 			let electronButtons = this.shadowRoot.querySelectorAll<Button>(".electronButton");
 			for (let i = 0; i < electronButtons.length; i++) {

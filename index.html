@@ -6,8 +6,18 @@
   <title>FAST Webpack</title>
 </head>
 
-<body>
-  <lewis-structure-canvas @ref="lewisStructureCanvas"></lewis-structure-canvas>
+<body style="background:#EEEEEE">
+  <lewis-structure-canvas ></lewis-structure-canvas>
+  <script>
+    window.addEventListener('load', () => {
+      const lewisStructureCanvas = document.querySelector('lewis-structure-canvas');
+      lewisStructureCanvas.addEventListener('change', (e) => {
+        console.log(e.detail);
+      });
+    }
+    );
+    
+  </script>
   <script src="dist/bundle.js"></script>
 </body>
 

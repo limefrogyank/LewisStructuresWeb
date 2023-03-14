@@ -18,7 +18,7 @@ export const samples : string[] = [
 
 interface IMimeTestUnit {
     tryMatchWith: string;
-    result: IComparisonResult;
+    result: IComparisonResult<Kekule.Atom, Kekule.Bond>;
     perspectiveTest: IPerspectiveTest;
 }
 interface IMimeTest {

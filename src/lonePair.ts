@@ -44,14 +44,6 @@ export class LonePair implements IDisposable {
 
 	constructor(options: ILonePairOptions) {
 
-		// options.originX = 'center'; 
-		// options.originY = 'center';
-		// options.selectable=false;
-		// options.lockMovementX=true;
-		// options.lockMovementY=true;
-		// options.hasControls=false;
-		// options.hoverCursor=settingsService.eraserCursor;
-
 		this._svg = options.svg;
 		this._group = this._svg.group().attr("aria-label", "Lone Pair");
 		this._circle1 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(Vertex.circleRadius / 3).fill('#000000');
@@ -71,33 +63,7 @@ export class LonePair implements IDisposable {
 		//this.owner.atom.appendMarker(this._electrons);  // GOING TO ADD LONE PAIR TO KEKULE MODEL BEFORE USING THIS CLASS.
 		
 		this.moveUsingRadians(this.radians);
-		// let selectionEllipse = new fabric.Ellipse({
-		// 	rx:LonePair.shortRadius,
-		// 	ry:LonePair.longRadius,
-		// 	stroke:'black',
-		// 	fill:'transparent',
-		// 	strokeDashArray: [5,5],
-		// 	strokeWidth:2,
-		// 	originX:'center',
-		// 	originY:'center',
-		// 	evented:true,
-		// 	hoverCursor:'null',
-		// 	opacity:0
-		// });
-
-
-		//super([selectionEllipse,circle1,circle2],options);
 		
-		// this._circle1 = circle1;
-		// this._circle2 = circle2;
-		// this._selectionEllipse=selectionEllipse;
-
-		
-
-		
-		//this._electrons.canvasLonePair = this;
-
-
 		this._ownerSubscription = this.owner.Position$.subscribe(position => {
 			if (this.radians == null) {
 				return;
@@ -105,29 +71,19 @@ export class LonePair implements IDisposable {
 			//console.log(this.radians);
 			let vect: Position = { x: Math.cos(this.radians), y: Math.sin(this.radians) };
 
-
-
 			this._group
 				.untransform()
 				.rotate(this.radians / Math.PI / 2 * 360)
 				.translate(position.x, position.y)
 				.translate(vect.x * (LonePair.extraMargin + Vertex.circleRadius), vect.y * (LonePair.extraMargin + Vertex.circleRadius));
-			// this._group
-			// 	.transform({
-			// 		rotate: this.radians,
-			// 		translateX: position.x + (vect.x * (LonePair.shortRadius + Vertex.circleRadius)), 
-			// 		translateY: position.y + (vect.y * (LonePair.shortRadius + Vertex.circleRadius))});
-			// this._group2.transform({
-			// 		translateX: position.x,
-			// 		translateY: position.y
-			// 	});
-			// this._group.transform({
-			// 	rotate: this.radians
-			// });
+
 			this._electrons.coord2D = {
 				x: position.x + (vect.x * (LonePair.extraMargin + Vertex.circleRadius)),
 				y: position.y + (vect.y * (LonePair.extraMargin + Vertex.circleRadius))
 			};
+
+			
+
 		});
 
 
@@ -247,6 +203,7 @@ export class LonePair implements IDisposable {
 	mouseUp(ev: PointerEvent) {
 		window.removeEventListener('pointermove', this._mouseMoveEventRef);
 		window.removeEventListener('pointerup', this._mouseUpEventRef);
+		this._svg.fire('change', this);
 	}
 
 	mouseOver(ev: MouseEvent) {

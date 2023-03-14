@@ -81,6 +81,8 @@ export class Vertex implements IDisposable {
 			const { handler, box } = e.detail;
 			e.preventDefault();
 			this._group.translate((box.x2 + box.x) / 2, (box.y2 + box.y) / 2);
+			//this._svg.fire('change', this);
+
 		});
 		// this._div = SVG('<div tabindex="0" aria-label="TESTING" style="background:transparent;width:100%;height:100%;opacity:0;">' + options.identity + '.</div>');
 		// this._foreignObject = this._group.foreignObject(Vertex.circleRadius * 2, Vertex.circleRadius * 2).cx(0).cy(0).add(this._div);
@@ -91,7 +93,7 @@ export class Vertex implements IDisposable {
 		//this._circle.cx(options.x).cy(options.y);
 		this._circle.cx(0).cy(0);
 		//this._circle.move(-Vertex.circleRadius, -Vertex.circleRadius);
-		this._circle.fill({ color: '#ffffff', opacity: 1 });
+		this._circle.fill({ color: '#FFFFFF', opacity: 0 });
 		this._circle.stroke({ color: hoverColor, width: 4, opacity: 0 }).filterWith((add) => {
 			add.gaussianBlur(2, 2);
 		});
@@ -166,6 +168,13 @@ export class Vertex implements IDisposable {
 		this._group.on('dragmove', (ev) => {
 			const transform = this._group.transform();
 			this._position$.next({ x: transform.translateX ?? 0, y: transform.translateY ?? 0 });
+			
+		});
+		this._group.on('dragend', (ev) => {
+			// const transform = this._group.transform();
+			// this._position$.next({ x: transform.translateX ?? 0, y: transform.translateY ?? 0 });
+			this._svg.fire('change', this);
+
 		});
 
 		this._group.click((ev: MouseEvent) => { 
@@ -196,15 +205,9 @@ export class Vertex implements IDisposable {
 					break;
 			}
 		});
-		// this._subscription = settingsService.whenMode.subscribe(mode =>{
-		// 	console.log('whenMovable changed on vertex');
-		// 	(this as fabric.Group).set({
-		// 		lockMovementX: mode != InteractionMode.move,
-		// 		lockMovementY: mode != InteractionMode.move,
-		// 		selectable: mode == InteractionMode.move
-		// 	});
-		// });
 
+		// Fire change after creating vertex
+		this._svg.fire('change', this);
 	}
 
 	setDraggable(yes: boolean) {
@@ -429,8 +432,9 @@ export class Vertex implements IDisposable {
 					svg: this._svg,
 					electronSet: electronSet
 				});
-
+				console.log("created temp LP");
 				this.attachments.push(this._tempLP);
+			// FORMAL CHARGE
 			} else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
 				let chargeMarker : Kekule.ChemMarker.Charge;
 				let chargeSVG : FormalCharge|null = null;
@@ -445,7 +449,7 @@ export class Vertex implements IDisposable {
 				}
 				chargeMarker.value += settingsService.currentBondType == BondType.positive ? 1 : -1;
 				this.atom.setCharge(chargeMarker.value);
-				console.log(chargeMarker.value);
+				//console.log(chargeMarker.value);
 				if (chargeMarker.value == 0){
 					//this.atom.removeMarker(chargeMarker);
 					if (chargeSVG != null){
@@ -465,7 +469,8 @@ export class Vertex implements IDisposable {
 						chargeSVG.updateCharge(chargeMarker.value);
 					}
 				}
-				
+				// don't need this because it will fire on vertex mouse up
+				//this._svg.fire('change', this);				
 
 			} else {
 
@@ -541,13 +546,9 @@ export class Vertex implements IDisposable {
 					this._text.text(settingsService.currentElement);
 					this.atom.setSymbol(settingsService.currentElement);
 					this._symbol$.next(settingsService.currentElement);
-					// 				//this.canvas.remove(this._tempLine);
-					//			this.canvas.remove(this._tempVertex);
 					this._tempLine?.dispose();
 					this._tempVertex?.dispose();
-					// 				this.attachments.splice(this.attachments.indexOf(this._tempLine),1);
 
-					// 				this._symbol.next(settingsService.currentElement);
 				} else {
 					// attach bond to existing atom
 					this._tempVertex?.dispose();
@@ -556,12 +557,6 @@ export class Vertex implements IDisposable {
 					if (this._tempLine != null) {
 						this.attachments.splice(this.attachments.indexOf(this._tempLine), 1);
 					}
-					//this.canvas.remove(this._tempLine);
-					//this.canvas.remove(this._tempVertex);
-					//this._tempLine?.dispose();
-
-					// if (this._tempLine != null)
-					// 	this.attachments.splice(this.attachments.indexOf(this._tempLine),1);
 
 					// is there a connector already drawn between those two atoms?
 					let connectorExists: boolean = false;
@@ -572,9 +567,6 @@ export class Vertex implements IDisposable {
 								// so one of the connectors on the starting vertex has a connected vertex of the hovered vertex... 
 								// we need to transform that connector to whatever we have selected and not add anything new.
 								connector.setBondType(settingsService.currentBondType);
-								//connector._bondType = settingsService.currentBondType;
-								//							connector.set({dirty:true});
-								// 							this.canvas?.renderAll();
 								connectorExists = true;
 							}
 						}
@@ -609,8 +601,11 @@ export class Vertex implements IDisposable {
 
 		}
 
-		// 	this.canvas?.renderAll();
-		// 	//console.log('mouseup!');
+	
+		// Fire change on mouse up.  NOT SURE ABOUT THIS.
+		// mouse up fires only for draw mode:  end drag (covered), change atom name
+		this._svg.fire('change', this);
+
 	}
 
 	public addConnector(connector: Connector) {
@@ -648,14 +643,9 @@ export class Vertex implements IDisposable {
 		if (old.translateY === undefined) {
 			throw "ERROR!";
 		}
-		// if (old.translateX !== undefined && old.translateY !== undefined) {
-		// 	this._group.translate(ev.clientX - bounds.left - old.translateX, ev.clientY - bounds.top - old.translateY);
-		// }
 
 		if (settingsService.isMoveable) {
-			//this._position.next(new fabric.Point(canvasCoords.x,canvasCoords.y));
-			//this.reportPositionChanged(canvasCoords.x, canvasCoords.y);
-			//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
+
 		} else {
 
 			if (settingsService.currentBondType == BondType.lonePair) {
@@ -665,230 +655,11 @@ export class Vertex implements IDisposable {
 			} else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
 				// this.updateAriaLabel(  
 			} else {
-
-				// console.log("X: " + (ev.clientX - bounds.left - old.translateX).toString() + ",  Y: " + (ev.clientY - bounds.top - old.translateY).toString());
-				// this._tempVertex.moveTo(ev.clientX - bounds.left - old.translateX, ev.clientY - bounds.top - old.translateY);
-				//console.log("X: " + (ev.clientX - bounds.left).toString() + ",  Y: " + (ev.clientY - bounds.top).toString());
 				this._tempVertex?.moveTo(ev.clientX - bounds.left, ev.clientY - bounds.top);
-				//this._tempVertex.atom.setCoord2D({ev.clientX - bounds.left - old.translateX, ev.clientY - bounds.top - old.translateY});
-
-				//.set({
-				// 	left: canvasCoords.x,
-				// 	top: canvasCoords.y,
-				// 	dirty:true
-				// });
-				// //this._tempVertex.atom.setCoord2D({x: canvasCoords.x, y: canvasCoords.y});
-				// this._tempVertex.reportPositionChanged(canvasCoords.x,canvasCoords.y);
-				// this._tempVertex.setCoords();
-				// this._tempLine.setCoords();
 			}
 		}
 	}
-	// mouseMoveBondDrawing(ev:any){
-	// 	let canvasCoords = this.canvas?.getPointer(ev);
-	// 	if (canvasCoords == null){
-	// 		return;
-	// 	}
-	// 	this._hasMoved=true;
-	// 	//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
-	// 	//console.log(`mousemoving: ${ev.x}, ${ev.y} `);
-	// 	if (settingsService.isMoveable){
-	// 		this._position.next(new fabric.Point(canvasCoords.x,canvasCoords.y));
-	// 		//this.reportPositionChanged(canvasCoords.x, canvasCoords.y);
-	// 		//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
-	// 	} else {
-
-	// 		if (settingsService.currentBondType == BondType.lonePair) {
-	// 			let vertexCenter = this._tempLP.owner.getCenterPoint();
-
-	// 			let vect = new fabric.Point(canvasCoords.x-vertexCenter.x,canvasCoords.y-vertexCenter.y);
-	// 			let length = Math.sqrt(Math.pow(vect.x,2) + Math.pow(vect.y,2));
-	// 			let normVect = new fabric.Point(vect.x/length, vect.y/length);
-	// 			let angle = Math.atan2(normVect.y, normVect.x);
-
-	// 			this._tempLP.set({
-	// 				angle:angle/Math.PI/2*360,
-	// 				left: vertexCenter.x + (normVect.x * (LonePair.shortRadius + Vertex.circleRadius)),
-	// 				top: vertexCenter.y + (normVect.y * (LonePair.shortRadius +  Vertex.circleRadius))
-	// 			});
-	// 			this._tempLP.setCoords();
-	// 			this._tempLP.updateKekulePosition(
-	// 				vertexCenter.x + (normVect.x * (LonePair.shortRadius + Vertex.circleRadius)), 
-	// 				vertexCenter.y + (normVect.y * (LonePair.shortRadius + Vertex.circleRadius))
-	// 				);
-
-
-	// 		} else {
-
-	// 			this._tempVertex.set({
-	// 				left: canvasCoords.x,
-	// 				top: canvasCoords.y,
-	// 				dirty:true
-	// 			});
-	// 			//this._tempVertex.atom.setCoord2D({x: canvasCoords.x, y: canvasCoords.y});
-	// 			this._tempVertex.reportPositionChanged(canvasCoords.x,canvasCoords.y);
-	// 			this._tempVertex.setCoords();
-	// 			this._tempLine.setCoords();
-	// 		}
-	// 	}
-
-	// 	this.canvas?.renderAll();
-	// }
-
-
-	// public reportPositionChanged(x :number, y:number){
-	// 	//this.atom.setCoord2D({x: x, y: y});
-	// 	this._position.next(new fabric.Point(x, y));
-	// 	//this.updateAriaLabel();
-
-	// }
-
-	// mouseUp(ev:any){
-	// 	//window.removeEventListener('mousemove', this._mouseMoveEventRef);
-	// 	//window.removeEventListener('mouseup', this._mouseUpEventRef);
-	// 	this.canvas?.off('mouse:move', this._mouseMoveEventRef);
-	// 	this.canvas?.off('mouse:up', this._mouseUpEventRef);
-
-	// 	if (settingsService.currentBondType == BondType.lonePair) {
-	// 		// let vertexCenter = this._tempLP.owner.getCenterPoint();
-	// 		// let currentPoint = this.canvas.getPointer(ev);
-	// 		// let vect = new fabric.Point(currentPoint.x-vertexCenter.x,currentPoint.y-vertexCenter.x);
-	// 		// let angle = Math.atan2(vect.y, vect.x);
-	// 		// let length = Math.sqrt(Math.pow(vect.x,2) + Math.pow(vect.y,2));
-	// 		// let normVect = new fabric.Point(vect.x/length, vect.y/length);
-
-	// 		// this._tempLP.set({
-	// 		// 	angle:angle,
-	// 		// 	left: normVect.x * (this._tempLP.rx + this._circle.radius),
-	// 		// 	top: normVect.y * (this._tempLP.rx + this._circle.radius)
-	// 		// });
-	// 		this.updateAriaLabel();
-
-	// 	} else {
-
-	// 		this._tempVertex.evented=true;
-	// 		this._tempLine.setEvented(true);
-
-	// 		if (settingsService.hoveredVertex !== null || !this._hasMoved){
-	// 			// hovering over an existing vertex
-	// 			if (settingsService.hoveredVertex == this || !this._hasMoved){
-	// 				// we're releasing mouse on same vertex we started with, just change vertex id to new atom (if different)
-	// 				this._text.set({
-	// 					text: settingsService.currentElement
-	// 				});
-	// 				//this.canvas.remove(this._tempLine);
-	// 				//this.canvas.remove(this._tempVertex);
-	// 				this._tempLine.dispose();
-	// 				this._tempVertex.dispose();
-	// 				this.attachments.splice(this.attachments.indexOf(this._tempLine),1);
-	// 				//this.atom.setSymbol(settingsService.currentElement);
-	// 				this._symbol.next(settingsService.currentElement);
-	// 			} else {
-	// 				// attach bond to existing atom
-	// 				//this.canvas.remove(this._tempLine);
-	// 				//this.canvas.remove(this._tempVertex);
-	// 				this._tempLine.dispose();
-	// 				this._tempVertex.dispose();
-	// 				this.attachments.splice(this.attachments.indexOf(this._tempLine),1);
-
-	// 				// is there a connector already there?
-	// 				let connectorExists:boolean = false;
-	// 				for (var i=0; i<this.attachments.length; i++){
-	// 					if (this.attachments[i] instanceof Connector){
-	// 						let connector = this.attachments[i] as Connector;
-	// 						if (connector._vertex1 == settingsService.hoveredVertex || connector._vertex2 == settingsService.hoveredVertex){
-	// 							// so one of the connectors on the starting vertex has a connected vertex of the hovered vertex... 
-	// 							// we need to transform that connector to whatever we have selected and not add anything new.
-	// 							connector.setBondType(settingsService.currentBondType);
-	// 							//connector._bondType = settingsService.currentBondType;
-	// 							connector.set({dirty:true});
-	// 							this.canvas?.renderAll();
-	// 							connectorExists=true;
-	// 						}
-	// 					}
-	// 				}
-	// 				if (!connectorExists){
-	// 					if (settingsService.hoveredVertex == null){
-	// 						return;
-	// 					}
-	// 					let center = this.getCenterPoint();
-	// 					let otherCenter = settingsService.hoveredVertex.getCenterPoint();
-	// 					this._tempLine = new Connector([center.x, center.y, otherCenter.x, otherCenter.y],{
-	// 						vertex1: this,
-	// 						vertex2: settingsService.hoveredVertex,
-	// 						bondType: settingsService.currentBondType,
-	// 						evented:false,
-	// 						molecule:this._molecule
-	// 					});
-	// 					this.canvas?.add(this._tempLine);
-	// 					this._tempLine.sendToBack();
-
-	// 					this.addConnector(this._tempLine);
-	// 					//this.attachments.push(this._tempLine);	
-	// 					settingsService.hoveredVertex.addConnector(this._tempLine);
-
-	// 					//settingsService.hoveredVertex.attachments.push(this._tempLine);
-	// 				}
-	// 			}
-
-
-	// 		} else {
-	// 			this._tempVertex.setCoords();
-	// 		}
-	// 		this._tempLine.setCoords();
-
-	// 	}
-
-	// 	this.canvas?.renderAll();
-	// 	//console.log('mouseup!');
-	// }
-
-	// mouseOverObject(ev:fabric.IEvent){
-	// 	console.log(this);
-	// 	console.log('mouseoverobject id: ' + this );
-	// 	settingsService.hoveredVertex=this;
-	// 	//  this._circle.set({
-	// 	//  	stroke: 'black',
-	// 	//  	strokeWidth: 2,
-	// 	// // 	strokeDashArray: [5,5]
-
-	// 	//  });
-	// 	this._circle.animate('strokeWidth', 2, {
-	// 		from:0,
-	// 		duration: 150,
-	// 		onChange: this.canvas?.renderAll.bind(this.canvas)
-	// 	})
-
-	// 	if (settingsService.readAloudAtoms){
-	// 		let u = new SpeechSynthesisUtterance();
-	// 		u.text = this._ariaLabel;
-	// 		if (window.speechSynthesis.speaking) {
-	// 			window.speechSynthesis.cancel();
-	// 		}
-	// 		window.speechSynthesis.speak(u);
-	// 	}
-	// 	//this.canvas.renderAll();
-	// }
-
-	// mouseOutObject(ev:fabric.IEvent){
-	// 	console.log('mouseoutobject');
-	// 	if (settingsService.hoveredVertex == this){
-	// 		settingsService.hoveredVertex = null;
-	// 	}
-	// 	// this._circle.set({
-	// 	// 	//stroke: 'white',
-	// 	// 	//strokeWidth: 0
-	// 	// });
-	// 	this._circle.animate('strokeWidth',0,{
-	// 		duration: 150,
-	// 		onChange: this.canvas?.renderAll.bind(this.canvas)
-	// 	});
-	// 	//this.canvas.renderAll();
-	// 	if (settingsService.readAloudAtoms) {
-	// 		window.speechSynthesis.cancel();
-	// 	}
-
-	// } 
+	
 	public bondCount(){
 		let bondCount= 0;
 		for (let i = 0; i < this.attachments.length; i++) {

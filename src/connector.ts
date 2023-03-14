@@ -63,19 +63,6 @@ export class Connector implements IDisposable {
 
 	constructor(options: IConnectorOptions) {
 
-		// options.stroke = options.stroke || 'black';
-		// options.strokeWidth = options.strokeWidth || 2;
-		// options.selectable = options.selectable|| false;
-		// options.moveCursor = options.moveCursor || 'none';
-		// options.evented = options.evented || false;
-		// options.originX = options.originX || 'center';
-		// options.originY = options.originY || 'center';
-		// options.hoverCursor='null';
-		// options.lockMovementX=true;
-		// options.lockMovementY=true;
-		// options.padding=15;
-
-
 		this._bondType = new BehaviorSubject<BondType>(options.bondType);
 		this.BondType = this._bondType.asObservable();
 
@@ -87,6 +74,7 @@ export class Connector implements IDisposable {
 		this._vertex1 = options.vertex1;
 		this._vertex2 = options.vertex2;
 
+		this._svg = options.svg;
 
 		// creating a new bond or just recreating from Kekule structure?
 		if (options.bond) {
@@ -102,28 +90,32 @@ export class Connector implements IDisposable {
 
 		this._bondType.subscribe(x => {
 			//this.setBondType(x);
-			switch (x) {
-				case BondType.single:
-					this.bond.setBondOrder(1);
-					this.bond.stereo = Kekule.BondStereo.NONE;
-					break;
-				case BondType.solid:
-					this.bond.setBondOrder(1);
-					this.bond.stereo = Kekule.BondStereo.UP;
-					break;
-				case BondType.dashed:
-					this.bond.setBondOrder(1);
-					this.bond.stereo = Kekule.BondStereo.DOWN;
-					break;
-				case BondType.double:
-					this.bond.setBondOrder(2);
-					this.bond.stereo = Kekule.BondStereo.NONE;
-					break;
-				case BondType.triple:
-					this.bond.setBondOrder(3);
-					this.bond.stereo = Kekule.BondStereo.NONE;
-					break;
-			}
+			//if (this._bondType.value != x){
+				switch (x) {
+					case BondType.single:
+						this.bond.setBondOrder(1);
+						this.bond.stereo = Kekule.BondStereo.NONE;
+						break;
+					case BondType.solid:
+						this.bond.setBondOrder(1);
+						this.bond.stereo = Kekule.BondStereo.UP;
+						break;
+					case BondType.dashed:
+						this.bond.setBondOrder(1);
+						this.bond.stereo = Kekule.BondStereo.DOWN;
+						break;
+					case BondType.double:
+						this.bond.setBondOrder(2);
+						this.bond.stereo = Kekule.BondStereo.NONE;
+						break;
+					case BondType.triple:
+						this.bond.setBondOrder(3);
+						this.bond.stereo = Kekule.BondStereo.NONE;
+						break;
+				}
+				
+			//}
+	
 
 		});
 		//let center = this.getCenterPoints();
@@ -181,6 +173,8 @@ export class Connector implements IDisposable {
 		this._vertex2PositionSubscription = options.vertex2.Position$.subscribe(point => {
 			this._vertexChange.next(options.vertex2);
 		});
+
+		//this._svg.fire('change', this);
 	}
 
 	public getAngleFrom(from:Vertex){
@@ -411,19 +405,13 @@ export class Connector implements IDisposable {
 
 	}
 
-
-	// private calculateCenter(a:) : Position {
-	// 	if (this._vertex1== null && this._vertex2 == null){
-	// 		return {x:0,y:0};
-	// 	} else if (this._vertex1 == null){
-	// 		return {x:this._vertex2?.Position$}
-	// 	}
-	// }
-
 	public setBondType(bondType: BondType) {
 		//this._bondType=bondType;
-		this._bondType.next(bondType);
-		this.moveLine();
+		if (this._bondType.value != bondType){
+			this._bondType.next(bondType);
+			this._svg.fire('change', this);  
+			this.moveLine();
+		}
 	}
 
 	public dispose() {
@@ -463,7 +451,8 @@ export class Connector implements IDisposable {
 				return;
 			}
 			if (this._bondType.value !== settingsService.currentBondType){
-				this._bondType.next(settingsService.currentBondType);
+				this.setBondType(settingsService.currentBondType);
+				//this._bondType.next(settingsService.currentBondType);
 				this.moveLine(); // just a way to redraw the line
 				//this._bondType = settingsService.currentBondType;
 				

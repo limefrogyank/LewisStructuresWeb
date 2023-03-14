@@ -5,7 +5,8 @@ import { observable } from '@microsoft/fast-element';
 export enum InteractionMode{
 	draw,
 	move,
-	erase
+	erase,
+	none
 }
 
 export enum BondType{
@@ -32,6 +33,9 @@ export class SettingsService {
 
 	public setDrawMode(mode:InteractionMode){
 		this._modeSubject.next(mode);
+	}
+	public get isReadonly():boolean{
+		return this._modeSubject.value == InteractionMode.none;
 	}
 	public get isMoveable():boolean{
 		return this._modeSubject.value == InteractionMode.move;
