@@ -2,15 +2,15 @@ import { Subject, BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 //import { fabric } from "fabric"; 
 import { Connector } from "./connector";
-import { settingsService } from './lewisStructureCanvas';
 //import { LonePair } from './lonePair';
-import { InteractionMode, BondType } from './service/settingsService';
+import { InteractionMode, BondType, SettingsService } from './service/settingsService';
 import { Range } from './rangeRadians';
 import { SVG, ForeignObject as SvgForeignObject, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element } from '@svgdotjs/svg.js';
 import { IDisposable, Position } from './interfaces';
 import { LonePair } from './lonePair';
 import { hoverColor } from './constants';
 import { FormalCharge } from './formalCharge';
+import { container } from 'tsyringe';
 
 
 export interface IVertexOptions {
@@ -71,9 +71,14 @@ export class Vertex implements IDisposable {
 
 	public type: string;
 
+	private settingsService: SettingsService;// = container.resolve();
+
+
 	constructor(options: IVertexOptions) {
 
 		this._svg = options.svg;
+		this.settingsService = container.resolve<SettingsService>((this._svg as any).tag);
+
 		this._group = options.svg.group().attr("tabindex", "0").attr("aria-label", "Atom");
 		this._group.translate(options.x, options.y);
 		//this._group.draggable();
@@ -90,6 +95,8 @@ export class Vertex implements IDisposable {
 
 
 		this._circle = this._group.circle(Vertex.circleRadius * 2 - 4);
+
+		this._circle.addClass("interactive");
 		//this._circle.cx(options.x).cy(options.y);
 		this._circle.cx(0).cy(0);
 		//this._circle.move(-Vertex.circleRadius, -Vertex.circleRadius);
@@ -136,7 +143,7 @@ export class Vertex implements IDisposable {
 		this._tabDiv.onblur = (ev) => {
 			//this.mouseOutObject({e:ev});
 		};
-		settingsService.keyboardDiv?.appendChild(this._tabDiv);
+		this.settingsService.keyboardDiv?.appendChild(this._tabDiv);
 
 		//console.log(Kekule.IO.saveMimeData(this._molecule,'chemical/x-kekule-json'));
 
@@ -195,7 +202,7 @@ export class Vertex implements IDisposable {
 		// // this.on('touchstart', this.mouseDown);
 		// this.on('moving', this.onObjectMoving);
 
-		this._subscription = settingsService.whenMode.subscribe(mode => {
+		this._subscription = this.settingsService.whenMode.subscribe(mode => {
 			switch (mode) {
 				case InteractionMode.move:
 					this._group.draggable();
@@ -223,11 +230,11 @@ export class Vertex implements IDisposable {
 	}
 
 	mouseOver(ev: MouseEvent) {
-		settingsService.hoveredVertex = this;
+		this.settingsService.hoveredVertex = this;
 	}
 	mouseOut(ev: MouseEvent) {
 		//if (settingsService.hoveredVertex != null){
-		settingsService.hoveredVertex = null;
+		this.settingsService.hoveredVertex = null;
 		//}
 	}
 
@@ -278,7 +285,6 @@ export class Vertex implements IDisposable {
 		// this.canvas?.remove(this);
 		this._molecule.removeNode(this.atom);
 		this._subscription.unsubscribe();
-
 	}
 
 	public _render(ctx: CanvasRenderingContext2D) {
@@ -378,14 +384,18 @@ export class Vertex implements IDisposable {
 		ev.stopPropagation();
 		this._hasMoved = false;
 
-		if (settingsService.isMoveable) {
+		if (this.settingsService.isMoveable) {
 
 
-		} else if (settingsService.isEraseMode) {
+		} else if (this.settingsService.isEraseMode) {
 
 			this.dispose();
+			
+			// change here because dispose could be fired by other mouse event
+			this._svg.fire('change', this);
 
-		} else if (settingsService.isDrawMode) {
+
+		} else if (this.settingsService.isDrawMode) {
 
 			this._mouseMoveEventRef = this.mouseMove.bind(this);
 			this._mouseUpEventRef = this.mouseUp.bind(this);
@@ -403,7 +413,7 @@ export class Vertex implements IDisposable {
 				centerY = 0;
 			}
 
-			if (settingsService.currentBondType == BondType.lonePair) {
+			if (this.settingsService.currentBondType == BondType.lonePair) {
 				// check if lone pair already exists... draw the lone pair starting at a slightly different angle 
 				// so the first one is not hidden
 				let angles: number[] = [];
@@ -435,7 +445,7 @@ export class Vertex implements IDisposable {
 				console.log("created temp LP");
 				this.attachments.push(this._tempLP);
 			// FORMAL CHARGE
-			} else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
+			} else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
 				let chargeMarker : Kekule.ChemMarker.Charge;
 				let chargeSVG : FormalCharge|null = null;
 				const markers = this.atom.getMarkersOfType(Kekule.ChemMarker.Charge);
@@ -447,7 +457,7 @@ export class Vertex implements IDisposable {
 					this.atom.appendMarker(chargeMarker);
 					chargeMarker.value = 0;
 				}
-				chargeMarker.value += settingsService.currentBondType == BondType.positive ? 1 : -1;
+				chargeMarker.value += this.settingsService.currentBondType == BondType.positive ? 1 : -1;
 				this.atom.setCharge(chargeMarker.value);
 				//console.log(chargeMarker.value);
 				if (chargeMarker.value == 0){
@@ -476,7 +486,7 @@ export class Vertex implements IDisposable {
 
 				const bounds = this._svg.node.getBoundingClientRect();
 				this._tempVertex = new Vertex({
-					identity: settingsService.currentElement,
+					identity: this.settingsService.currentElement,
 					x: ev.clientX - bounds.left,
 					y: ev.clientY - bounds.top,
 					molecule: this._molecule,
@@ -488,7 +498,7 @@ export class Vertex implements IDisposable {
 				this._tempLine = new Connector({
 					vertex1: this,
 					vertex2: this._tempVertex,
-					bondType: settingsService.currentBondType,
+					bondType: this.settingsService.currentBondType,
 					molecule: this._molecule,
 					svg: this._svg
 				});
@@ -526,10 +536,10 @@ export class Vertex implements IDisposable {
 		this._svg.off('mouseup', this._mouseUpEventRef);
 		// 	this.canvas?.off('mouse:up', this._mouseUpEventRef);
 
-		if (settingsService.currentBondType == BondType.lonePair) {
+		if (this.settingsService.currentBondType == BondType.lonePair) {
 				
 				// this.updateAriaLabel();
-		}else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
+		}else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
 			// this.updateAriaLabel( 
 		} else {
 
@@ -538,14 +548,14 @@ export class Vertex implements IDisposable {
 			this._tempLine?._group.removeClass("eventless");
 			// 		this._tempVertex.evented=true;
 			// 		this._tempLine.setEvented(true);
-			if (settingsService.hoveredVertex !== null || !this._hasMoved) {
+			if (this.settingsService.hoveredVertex !== null || !this._hasMoved) {
 				// hovering over an existing vertex
-				if (settingsService.hoveredVertex == this || !this._hasMoved) {
+				if (this.settingsService.hoveredVertex == this || !this._hasMoved) {
 					console.log("Overwriting vertex with temp one");
 					// we're releasing mouse on same vertex we started with, just change vertex id to new atom (if different)
-					this._text.text(settingsService.currentElement);
-					this.atom.setSymbol(settingsService.currentElement);
-					this._symbol$.next(settingsService.currentElement);
+					this._text.text(this.settingsService.currentElement);
+					this.atom.setSymbol(this.settingsService.currentElement);
+					this._symbol$.next(this.settingsService.currentElement);
 					this._tempLine?.dispose();
 					this._tempVertex?.dispose();
 
@@ -563,27 +573,27 @@ export class Vertex implements IDisposable {
 					for (var i = 0; i < this.attachments.length; i++) {
 						if (this.attachments[i] instanceof Connector) {
 							let connector = this.attachments[i] as Connector;
-							if (connector._vertex1 == settingsService.hoveredVertex || connector._vertex2 == settingsService.hoveredVertex) {
+							if (connector._vertex1 == this.settingsService.hoveredVertex || connector._vertex2 == this.settingsService.hoveredVertex) {
 								// so one of the connectors on the starting vertex has a connected vertex of the hovered vertex... 
 								// we need to transform that connector to whatever we have selected and not add anything new.
-								connector.setBondType(settingsService.currentBondType);
+								connector.setBondType(this.settingsService.currentBondType);
 								connectorExists = true;
 							}
 						}
 					}
 					if (!connectorExists) {
-						if (settingsService.hoveredVertex == null) {
+						if (this.settingsService.hoveredVertex == null) {
 							throw "Hovered vertex should not be null.";
 						}
 						this._tempLine = new Connector({
 							vertex1: this,
-							vertex2: settingsService.hoveredVertex,
-							bondType: settingsService.currentBondType,
+							vertex2: this.settingsService.hoveredVertex,
+							bondType: this.settingsService.currentBondType,
 							molecule: this._molecule,
 							svg: this._svg
 						});
 						this.addConnector(this._tempLine);
-						settingsService.hoveredVertex.addConnector(this._tempLine);
+						this.settingsService.hoveredVertex.addConnector(this._tempLine);
 
 					}
 				}
@@ -616,6 +626,10 @@ export class Vertex implements IDisposable {
 	 	this.attachments.push(lonePair);
 	}
 
+	public addFormalCharge(charge:FormalCharge){
+		this.attachments.push(charge);
+   }
+
 	public removeAttachment(item: Object) {
 		let subs = this.attachmentSubs.get(item);
 		if (subs != null) {
@@ -644,15 +658,15 @@ export class Vertex implements IDisposable {
 			throw "ERROR!";
 		}
 
-		if (settingsService.isMoveable) {
+		if (this.settingsService.isMoveable) {
 
 		} else {
 
-			if (settingsService.currentBondType == BondType.lonePair) {
+			if (this.settingsService.currentBondType == BondType.lonePair) {
 				
 				let canvasCoords : Position = {x:ev.clientX-bounds.left,y:ev.clientY-bounds.top};
 				this._tempLP.moveUsingCoord(canvasCoords);
-			} else if (settingsService.currentBondType == BondType.positive || settingsService.currentBondType == BondType.negative) {
+			} else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
 				// this.updateAriaLabel(  
 			} else {
 				this._tempVertex?.moveTo(ev.clientX - bounds.left, ev.clientY - bounds.top);

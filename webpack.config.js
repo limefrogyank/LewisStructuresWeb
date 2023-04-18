@@ -3,37 +3,38 @@ const TerserPlugin = require("terser-webpack-plugin");
 const path = require('path');
 const { dirname } = require("path");
 
-module.exports = function(env, { mode }) {
+module.exports = function (env, { mode }) {
   const production = mode === 'production';
   return {
     mode: production ? 'production' : 'development',
-	target: "web",
+
+    target: "web",
     devtool: production ? 'source-map' : 'inline-source-map',
     entry: {
       app: ['./src/main.ts']
     },
-	ignoreWarnings:[
-		
-			(warning)=>true
-			
-	],
-	optimization:{
-		chunkIds: 'named',
-		minimizer: [
-			new TerserPlugin({
-			  parallel: true,
-			  terserOptions: {
-				mangle: {
-					reserved: ['$super', '$origin'] 
-				  },
-				// https://github.com/webpack-contrib/terser-webpack-plugin#terseroptions
-			  },
-			}),
-		  ],
-	},
+    ignoreWarnings: [
+
+      (warning) => true
+
+    ],
+    optimization: {
+      chunkIds: 'named',
+      minimizer: [
+        new TerserPlugin({
+          parallel: true,
+          terserOptions: {
+            mangle: {
+              reserved: ['$super', '$origin']
+            },
+            // https://github.com/webpack-contrib/terser-webpack-plugin#terseroptions
+          },
+        }),
+      ],
+    },
     output: {
       filename: 'bundle.js',
-      publicPath:'/',
+      publicPath: '/',
       path: path.resolve(__dirname, "dist")
     },
     resolve: {
@@ -56,7 +57,7 @@ module.exports = function(env, { mode }) {
         cleanOnceBeforeBuildPatterns: [
           '**/*',
           '!openbabel*'
-      ]
+        ]
       })
     ],
     module: {
@@ -70,10 +71,10 @@ module.exports = function(env, { mode }) {
           ],
           exclude: /node_modules/
         },
-		{
-			test: /\.css$/i,
-			use: ['style-loader', 'css-loader'],
-		}
+        {
+          test: /\.css$/i,
+          use: ['style-loader', 'css-loader'],
+        }
       ]
     }
   }

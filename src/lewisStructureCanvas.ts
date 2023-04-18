@@ -6,21 +6,28 @@ import { InteractionMode, SettingsService, BondType } from './service/settingsSe
 import { provideFluentDesignSystem, fluentButton, fluentTextField, fluentDialog, fluentMenu, fluentMenuItem } from '@fluentui/web-components';
 import * as obm from './kekule/dist/extra/openbabel.js';
 import { Button, TextField } from '@fluentui/web-components';
-import { obMolToCAN, obMolToKekule } from './openBabelStuff';
+import { obMolToCAN, obMolToInChI, obMolToKekule } from './openBabelStuff';
 import { addLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
 import './openbabel.js'
 import { Connector } from './connector';
-import { BlindOutput, ComparisonOutput, ComparisonResult, IBlindOutput, IComparisonOutput, IComparisonResult, Position } from './interfaces';
+import { BlindOutput, ComparisonOutput, ComparisonResult, CompressedWebworkOutput, IBlindOutput, IComparisonOutput, IComparisonResult, ICompressedWebworkOutput, Position } from './interfaces';
 import { LonePair } from './lonePair';
 import { Kekule as k } from 'kekule';
 import { mimeTests, samples } from './tests';
 import { negativeCircleSvg, positiveCircleSvg } from './svgs';
 import { getValence } from './valence';
-k; //loads kekule stuff, prevents tree-shaking.
+import { FormalCharge } from './formalCharge';
 
+import { container } from "tsyringe";
+//import * as zlib from "zlib";
+import {Buffer} from "buffer";
+import * as pako from "pako/dist/pako.js";
+import * as LZ77 from "lz77";
+k; //loads kekule stuff, prevents tree-shaking.
+console.log(pako);
 declare global {
 	interface Window {
 		//Kekule: Kekule;
@@ -35,6 +42,7 @@ export interface OpenBabelModule {
 	OBOp: OpenBabelModule.OBOp;
 	ObConversionWrapper: OpenBabelModule.ObConversionWrapper;
 	ObBaseHelper: OpenBabelModule.ObBaseHelper;
+	ObConversion_Option_type: any;
 	onRuntimeInitialized: () => void;
 
 
@@ -58,7 +66,7 @@ export namespace OpenBabelModule {
 		readString(mol: OBMol, data: string);
 		writeString(mol: OBMol, trimWhiteSpace: boolean): string;
 		delete(): void;
-		addOption(empty: string, option: string, value: string|null): void;
+		addOption(empty: string, option: string, value: string | null): void;
 
 		getSupportedInputFormatsStr(delimiter: string): string;
 		getSupportedOutputFormatsStr(delimiter: string): string;
@@ -125,7 +133,7 @@ g:focus-visible{
 	outline: -webkit-focus-ring-color auto 5px;
 }
 </style>
-${when(x=>!x.readonly, html<LewisStructureCanvas>`
+${when(x => !x.readonly, html<LewisStructureCanvas>`
 	<div role="toolbar" ${ref("toolbarDiv")} style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 
 		<div style="display:flex;margin-right:5px;">
@@ -212,14 +220,14 @@ ${when(x=>!x.readonly, html<LewisStructureCanvas>`
 				</svg>
 			</fluent-button>
 			<fluent-button appearance="outline" id='positive' class="electronButton" aria-label="Positive Formal Charge"
-				:innerHTML="${x=>positiveCircleSvg}">		
+				:innerHTML="${x => positiveCircleSvg}">		
 			</fluent-button>
 			<fluent-button appearance="outline" id='negative' class="electronButton" aria-label="Negative Formal Charge" 
-				:innerHTML="${x=>negativeCircleSvg}">				
+				:innerHTML="${x => negativeCircleSvg}">				
 			</fluent-button>
 		</div>
 
-		${when(x=>x.debug, html<LewisStructureCanvas>`
+		${when(x => x.debug, html<LewisStructureCanvas>`
 		<div style="display:flex;margin-right:5px;" role="group" >
 			<fluent-button appearance="${x => x.settingsService.readAloudAtoms ? "accent" : "outline"}" class="readAloudButton" ${ref("readAloudButton")} aria-label="Read aloud toggle">
 				🔊&#xFE0E;
@@ -228,20 +236,20 @@ ${when(x=>!x.readonly, html<LewisStructureCanvas>`
 		`)}
 	</div>
 	`)}
-	<div id='svgContainer' ${ref("svgContainer")} style='width:${x => x.width}px;height:${x => x.height}px;border:black solid 1px;user-select:none;'>
+	<div id='svgContainer' ${ref("svgContainer")} style='width:${x => x.width}px;height:${x => x.height}px;border:black solid 1px;user-select:none;pointer-events:${x => x.readonly ? "none" : "auto"}'>
 
 	</div>
 	
 	<periodic-table-modal 
 		@change="${(x, c) => {
-		settingsService.setElement((c.event as CustomEvent).detail);
+		x.settingsService.setElement((c.event as CustomEvent).detail);
 		x.dismissPeriodicTable();
 	}}"
 		visible="${x => x.visibleElementSelector}" 
 		@dismiss="${x => x.dismissPeriodicTable()}"
 	>
 	</periodic-table-modal>
-${when(x=>x.debug, html<LewisStructureCanvas>`
+${when(x => x.debug, html<LewisStructureCanvas>`
 	<div role="toolbar" style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 		<div style="display:flex;margin-right:5px;">
 			<fluent-button appearance="outline" @click="${async x => console.log(await x.compareMoleculeAsync())}">Compare</fluent-button>
@@ -284,14 +292,10 @@ ${x => x.debugString}
 // 	}
 // }
 
-export var settingsService = new SettingsService();
+//export var settingsService : SettingsService;
 //settingsService.test = "setting new text";
 
-//(window as any).op = openBabel;
-//(Kekule as any).environment.setEnvVar('openbabel.scriptSrc', 'openbabel.js');
-//(Kekule as any).environment.setEnvVar('kekule.scriptSrc', './kekule.min.js');
-//Kekule.OpenBabel.getObPath = function(){return "/"};
-//Kekule.OpenBabel.enable((er)=>console.log('loaded!!!!'));
+
 obm;
 (window as any).OpenBabelModule = obm;
 
@@ -324,16 +328,15 @@ export class LewisStructureCanvas extends FASTElement {
 
 	@observable debugString: string = "";
 	@attr smiles: string;
-	@attr({mode:'boolean'}) readonly: boolean = false;
-	
+	@attr({ mode: 'boolean' }) readonly: boolean = false;
 
-	debug:boolean=false;
+	debug: boolean = false;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;
 	//mainCanvas: HTMLCanvasElement;
 	svgContainer: HTMLDivElement;
-	settingsService: SettingsService;
+	settingsService: SettingsService = new SettingsService();
 	elementTextField: TextField;
 	keyboardDiv: HTMLDivElement;
 
@@ -345,17 +348,12 @@ export class LewisStructureCanvas extends FASTElement {
 
 	molecule: Kekule.Molecule | null;
 
-	// fabricCanvas:fabric.Canvas;
-
-	// invisibleCanvas:HTMLCanvasElement;
-	// invisibleFabricCanvas:fabric.Canvas;
 	mainSVG: Svg;
-
 
 
 	public dismissPeriodicTable() {
 		let s = SVG();
-		//console.log('dismised!');
+
 		this.visibleElementSelector = false;
 		this.periodicTableButton.focus();
 	}
@@ -363,7 +361,8 @@ export class LewisStructureCanvas extends FASTElement {
 	constructor() {
 		super();
 
-		this.settingsService = settingsService;
+		//this.settingsService = new SettingsService();
+		//settingsService = this.settingsService;
 		this.molecule = new Kekule.Molecule();
 
 	}
@@ -373,6 +372,39 @@ export class LewisStructureCanvas extends FASTElement {
 		addLonePairsAndRedraw(tempKekuleMolecule, false);
 		this.clearMolecule();
 		this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
+	}
+
+	public async loadMoleculeUsingMolAsync(molFile: string, generateCoords: boolean = false) {
+		if (generateCoords){
+			const kekule = await new Promise<Kekule.Molecule>((resolve, reject) => {
+				//console.log("running load smiles!");
+				let openBabel = window.OpenBabelModule();
+				openBabel.onRuntimeInitialized = () => {
+					//console.log("INitialized!");
+					(window as any).ob = openBabel;
+	
+					let mol = new openBabel.OBMol();
+					let conv = new openBabel.ObConversionWrapper();
+					conv.setInFormat('', "mol");
+					conv.readString(mol, molFile);
+	
+	
+					let gen = openBabel.OBOp.FindType('gen2D');
+					gen.Do(mol, '');
+	
+					let result = new Kekule.Molecule();
+					obMolToKekule(openBabel, mol, result, null);
+	
+					resolve(result);
+				};
+			});
+			addLonePairsAndRedraw(kekule, false);
+			this.clearMolecule();
+			this.molecule = this.drawMolecule(kekule, this.mainSVG, true);
+		} else {
+
+		}
+		
 	}
 
 	public async loadOne() {
@@ -395,7 +427,7 @@ export class LewisStructureCanvas extends FASTElement {
 				const moleculeToCompareWith = Kekule.IO.loadMimeData(unitTest.tryMatchWith, 'chemical/x-kekule-json');
 				const result = this.compareStructure(this.molecule, moleculeToCompareWith);
 				for (const key in result) {
-					if (typeof result[key] !== "object"){
+					if (typeof result[key] !== "object") {
 						if (result[key] !== unitTest.result[key]) {
 							console.error(`%c KEY: ${key}`, `color: red;`);
 							console.error(`%c Test failed for ${mimeTest.smiles} and ${unitTest.tryMatchWith}`, `color: red;`);
@@ -408,7 +440,7 @@ export class LewisStructureCanvas extends FASTElement {
 					}
 				}
 				const badNodes = this.checkDashWedgeBonds(moleculeToCompareWith);
-				if (badNodes.length > 0 && unitTest.perspectiveTest.pass ) {
+				if (badNodes.length > 0 && unitTest.perspectiveTest.pass) {
 					console.error(`%cFor ${mimeTest.smiles}, index=${testIndex}, ${badNodes.length} node(s) did not have perspective drawn correctly.`, `color: red;`);
 					console.error(badNodes);
 				} else if (badNodes.length === 0 && !unitTest.perspectiveTest.pass) {
@@ -427,30 +459,136 @@ export class LewisStructureCanvas extends FASTElement {
 		}
 	}
 
-	public async getBlindOutputAsync(): Promise<IBlindOutput> {
+	public async getCompressedWebworkOutputAsync(): Promise<ICompressedWebworkOutput> {
 		if (this.molecule == null) {
-			return new BlindOutput({programError: "No structure has been loaded."});
+			return new CompressedWebworkOutput({ programError: "No structure has been loaded." });
 		}
-		const smiles = await this.exportCanonicalSmilesAsync(this.molecule);
+		// Sometimes openBabel will add extra hydrogens when converting mol to smiles because of formal charges and valence rules
+		// However, adding this explicit atoms option will create non-standard SMILES.  i.e. [NH4+] will output as [H][N+]([H])([H])[H]
+		// So, we should check that the number of atoms is the same before and after conversion.  If not, add the option and redo the conversion.
+
+		let smiles = await this.exportCanonicalSmilesAsync(this.molecule);
 		if (smiles == null || smiles == "") {
-			return new BlindOutput({empty:true, programError: "Structure does not correspond to correct any valid structure."});
+			return new CompressedWebworkOutput({ empty: true, programError: "Structure does not correspond to correct any valid structure." });
 		}
-		
-		const output: IBlindOutput = new BlindOutput({smiles: smiles});
+
+		// create kekule structure for smiles determined and verify it has the same number of atoms, otherwise redo conversion with explicit atoms
+		let tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		if (tempKekuleMolecule.getNodeCount() !== this.molecule.getNodeCount()) {
+			smiles = await this.exportCanonicalSmilesAsync(this.molecule, true);
+			tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		}
+
+
+		const output: ICompressedWebworkOutput = new CompressedWebworkOutput({});
 		const badNodes = this.checkDashWedgeBonds(this.molecule);
 		if (badNodes.length > 0) {
 			output.programError = "Perspective is not drawn correctly.";
-			output.perspectiveCorrect=false;
-			output.perspectiveErrorAtom = badNodes.map(x=>x.symbol);
+			output.perspectiveCorrect = false;
+			//output.perspectiveErrorAtom = badNodes.map(x => x.symbol);
+		}
+		// store original kekule structure as mime
+		let rawkekule = this.getKekuleMime();
+		let input = Buffer.from(rawkekule);
+		let compressed = await new Promise<string>(
+			(resolve, reject) => {
+				const output :Uint8Array = pako.deflate(input);
+				var len = output.byteLength;
+				let binary = '';
+				for (var i = 0; i < len; i++) {
+					binary += String.fromCharCode( output[ i ] );
+				}
+				resolve(window.btoa( binary ));
+			
+				
+			}
+		);
+		output.kekuleMimeCompressed = compressed;
+
+		let json = JSON.parse(rawkekule);
+		delete json["coordPos2D"];
+		delete json["coordPos3D"];
+		delete json["renderOptions"];
+		delete json["parity"];
+		for (const node of json["ctab"]["nodes"]){
+			delete node["coordPos2D"];
+			delete node["coordPos3D"];
+			delete node["coord2D"];
+			if (node["attachedMarkers"]){
+				for (const markers of node["attachedMarkers"]){
+					delete markers["coordPos2D"];
+					delete markers["coordPos3D"];
+					delete markers["isAttachedToParent"];
+					delete markers["coord2D"];
+					delete markers["parity"];
+				}
+			}
+		}
+		delete json["anchorNodes"];
+		for (const connector of json["ctab"]["connectors"]){
+			delete connector["coordPos2D"];
+			delete connector["coordPos3D"];
+			delete connector["coord2D"];
+			delete connector["parity"];
+			delete connector["isInAromaticRing"];
 		}
 
-		// create kekule structure for smiles determined, add lone pairs, and compare with original
-		const tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		output.simpleKekule = JSON.stringify(json);
+		// console.log(LZ77);
+		// // store original svg
+		// let compressed2 = LZ77.compress(this.getSVG()); 
+		// console.log("DONE COMPRESSING");
+		// console.log(compressed2);
+		// //output.svg = compressed2;
+		// console.log(output);
+		return output;
+	}
+
+	public async getBlindOutputAsync(): Promise<IBlindOutput> {
+		if (this.molecule == null) {
+			return new BlindOutput({ programError: "No structure has been loaded." });
+		}
+		// Sometimes openBabel will add extra hydrogens when converting mol to smiles because of formal charges and valence rules
+		// However, adding this explicit atoms option will create non-standard SMILES.  i.e. [NH4+] will output as [H][N+]([H])([H])[H]
+		// So, we should check that the number of atoms is the same before and after conversion.  If not, add the option and redo the conversion.
+
+		let smiles = await this.exportCanonicalSmilesAsync(this.molecule);
+		if (smiles == null || smiles == "") {
+			return new BlindOutput({ empty: true, programError: "Structure does not correspond to correct any valid structure." });
+		}
+
+		// create kekule structure for smiles determined and verify it has the same number of atoms, otherwise redo conversion with explicit atoms
+		let tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		if (tempKekuleMolecule.getNodeCount() !== this.molecule.getNodeCount()) {
+			smiles = await this.exportCanonicalSmilesAsync(this.molecule, true);
+			tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		}
+
+		// unused, but maybe useful in the future.  
+		const inchi = await this.exportInChIAsync(this.molecule);
+
+		const mol = await this.exportMolAsync(this.molecule);
+
+		const output: IBlindOutput = new BlindOutput({ smiles: smiles, inchi: inchi, mol: mol });
+		const badNodes = this.checkDashWedgeBonds(this.molecule);
+		if (badNodes.length > 0) {
+			output.programError = "Perspective is not drawn correctly.";
+			output.perspectiveCorrect = false;
+			output.perspectiveErrorAtom = badNodes.map(x => x.symbol);
+		}
+		// store original kekule structure as mime
+		output.kekuleMime = this.getKekuleMime();
+		// store original svg
+		output.svg = this.getSVG();
+		// count atoms
+		output.atomNums = this.molecule.nodes.filter(x=>x instanceof Kekule.Atom).map(x => (x as Kekule.Atom).atomicNumber);
+
+		// add lone pairs, and compare with original
 		addLonePairsAndRedraw(tempKekuleMolecule, false);
 		const comparisonResult = this.compareStructure(this.molecule, tempKekuleMolecule);
 		output.blindComparisonResult = ComparisonResult.toStringOutput(comparisonResult);
 		if (output.blindComparisonResult.lonePairCountError) {
-			if (output.programError !== ""){
+			if (output.programError !== "") {
 				output.programError += "\n";
 			}
 			output.programError += "Lone pairs are not drawn correctly.";
@@ -461,7 +599,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 
 
-	public checkPerspective():boolean{
+	public checkPerspective(): boolean {
 		if (this.molecule == null) {
 			return false;
 		}
@@ -472,27 +610,27 @@ export class LewisStructureCanvas extends FASTElement {
 		return true;
 	}
 
-	public async compareMoleculeAsync():Promise<IComparisonOutput>{
+	public async compareMoleculeAsync(): Promise<IComparisonOutput> {
 		if (this.molecule == null) {
-			return new ComparisonOutput({empty:true});
+			return new ComparisonOutput({ empty: true });
 		}
-		if (this.smiles == "" || this.smiles == null){
-			return new ComparisonOutput({programError: "Missing SMILES to compare molecule to."});
+		if (this.smiles == "" || this.smiles == null) {
+			return new ComparisonOutput({ programError: "Missing SMILES to compare molecule to." });
 		}
 
-		let output :IComparisonOutput = new ComparisonOutput({smiles: this.smiles});
+		let output: IComparisonOutput = new ComparisonOutput({ smiles: this.smiles });
 
 		let molToCompareWith = await this.loadSmilesAsync(this.smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
 		addLonePairsAndRedraw(molToCompareWith, false);
-		
+
 		output.comparisonResult = ComparisonResult.toStringOutput(this.compareStructure(this.molecule, molToCompareWith));
-		
+
 		const badNodes = this.checkDashWedgeBonds(this.molecule);
 		if (badNodes.length > 0) {
 			output.perspectiveCorrect = false;
-			output.perspectiveErrorAtom = badNodes.map(x=>x.symbol);
+			output.perspectiveErrorAtom = badNodes.map(x => x.symbol);
 		}
-		
+
 		return output;
 	}
 
@@ -524,16 +662,16 @@ export class LewisStructureCanvas extends FASTElement {
 		if (this.molecule == null) {
 			return false;
 		}
-		let atoms = this.molecule.nodes.filter(x=>x instanceof Kekule.Atom).map(x=> x as Kekule.Atom);
+		let atoms = this.molecule.nodes.filter(x => x instanceof Kekule.Atom).map(x => x as Kekule.Atom);
 		let lonePairElectrons = 0;
 		for (const atom of atoms) {
 			const lonePairs = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
-			lonePairElectrons += lonePairs.length*2;
+			lonePairElectrons += lonePairs.length * 2;
 		}
-		let bonds = this.molecule.connectors.filter(x=>x instanceof Kekule.Bond).map(x=> x as Kekule.Bond);
+		let bonds = this.molecule.connectors.filter(x => x instanceof Kekule.Bond).map(x => x as Kekule.Bond);
 		let bondElectrons = 0;
 		for (const bond of bonds) {
-			bondElectrons += bond.bondOrder*2;
+			bondElectrons += bond.bondOrder * 2;
 		}
 
 		let electronCount = 0;
@@ -554,11 +692,11 @@ export class LewisStructureCanvas extends FASTElement {
 		return electronCount === (lonePairElectrons + bondElectrons);
 	}
 
-	private async getSMILESAsync(){
+	private async getSMILESAsync() {
 		if (this.molecule == null) {
 			return "empty";
 		}
-		if (!this.verifyElectronCount()){
+		if (!this.verifyElectronCount()) {
 			console.warn("Not a valid Lewis structure");
 			return "invalid";
 		}
@@ -587,6 +725,60 @@ export class LewisStructureCanvas extends FASTElement {
 		this.molecule = Kekule.IO.loadMimeData(kekule, 'chemical/x-kekule-json');
 		this.drawMolecule(this.molecule, this.mainSVG, true);
 	}
+
+	public loadKekuleCompressed(kekuleCompressed: string) {
+		let compressed = window.atob(kekuleCompressed);
+		let input = new Uint8Array(compressed.length);
+		for (let i = 0; i < compressed.length; i++) {
+			input[i] = compressed.charCodeAt(i);
+		}
+		const output :Uint8Array = pako.inflate(input);
+		const kekule = new TextDecoder().decode(output);
+		this.molecule = Kekule.IO.loadMimeData(kekule, 'chemical/x-kekule-json');
+		this.drawMolecule(this.molecule, this.mainSVG, true);
+	}
+
+	// Adapted from https://stackoverflow.com/a/58142441/1938624
+	public async getImageAsync(){
+		const imgData = await this.svgToPngAsync(this.mainSVG.svg());
+		return imgData;
+	}
+
+	private async svgToPngAsync(svg) {
+		const url = this.getSvgUrl(svg);
+		const imgData = await this.svgUrlToPngAsync(url);
+		URL.revokeObjectURL(url);
+		return imgData;
+	}
+
+	private getSvgUrl(svg) {
+		return  URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+	}
+	private svgUrlToPngAsync(svgUrl) {
+		const svgImage = document.createElement('img');
+		// imgPreview.style.position = 'absolute';
+		// imgPreview.style.top = '-9999px';
+		document.body.appendChild(svgImage);
+		const promise = new Promise((resolve, reject) => {
+			svgImage.onload = () => {
+				const canvas = document.createElement('canvas');
+				canvas.width = svgImage.clientWidth;
+				canvas.height = svgImage.clientHeight;
+				const canvasCtx = canvas.getContext('2d');
+				if (canvasCtx == null){
+					reject("canvasCtx is null");
+				} else {
+					canvasCtx.drawImage(svgImage, 0, 0);
+					const imgData = canvas.toDataURL('image/webp', 0.1);
+					resolve(imgData);
+				}
+				// document.body.removeChild(imgPreview);
+			};
+		});
+		svgImage.src = svgUrl;
+		return promise;
+		
+	 }
 
 	private loadSmilesAsync(smiles: string): Promise<Kekule.Molecule> {
 		return new Promise<Kekule.Molecule>((resolve, reject) => {
@@ -618,7 +810,45 @@ export class LewisStructureCanvas extends FASTElement {
 		});
 	}
 
-	private exportCanonicalSmilesAsync(molecule: Kekule.Molecule): Promise<string> {
+	private exportCanonicalSmilesAsync(molecule: Kekule.Molecule, outputExplicitHydrogensAsSuch:boolean=false): Promise<string> {
+		return new Promise<string>((resolve, reject) => {
+			// We need to create a copy of the molecule and add correct formal charges based on explicit hydrogens and other atoms.
+			// If we don't do this, drawing a single carbon atom will result in a SMILES of C instead of [C-4].
+
+			const clone = molecule.clone();
+			clone.nodes.forEach(node => {
+				const atom = node as Kekule.Atom;
+				const lonePairCount = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet).length;
+				const bondOrderTotal = atom.getLinkedBonds().reduce((acc, bond) => acc + bond.bondOrder, 0);
+				// if less than octet and greater than boron, add charge
+				if (atom.atomicNumber > 5){
+					const charge = getValence(atom) - (lonePairCount * 2 + bondOrderTotal);
+					if (charge !== 0) {
+						atom.setCharge(charge);
+					}
+				}
+			});
+
+			let molFile = Kekule.IO.saveMimeData(clone, 'chemical/x-mdl-molfile');
+			let openBabel = window.OpenBabelModule();
+			openBabel.onRuntimeInitialized = () => {
+				//console.log("INitialized!");
+				(window as any).ob = openBabel;
+
+				let mol = new openBabel.OBMol();
+				let conv = new openBabel.ObConversionWrapper();
+				conv.setInFormat('', "mol");
+				conv.readString(mol, molFile);
+
+				
+				const can = obMolToCAN(openBabel, mol, outputExplicitHydrogensAsSuch);
+
+				resolve(can);
+			};
+		});
+	}
+
+	private exportInChIAsync(molecule: Kekule.Molecule): Promise<string> {
 		return new Promise<string>((resolve, reject) => {
 			let molFile = Kekule.IO.saveMimeData(molecule, 'chemical/x-mdl-molfile');
 			let openBabel = window.OpenBabelModule();
@@ -630,16 +860,37 @@ export class LewisStructureCanvas extends FASTElement {
 				let conv = new openBabel.ObConversionWrapper();
 				conv.setInFormat('', "mol");
 				conv.readString(mol, molFile);
-				
-				const can = obMolToCAN(openBabel, mol);
+
+				const can = obMolToInChI(openBabel, mol);
 
 				resolve(can);
 			};
 		});
 	}
 
+	private exportMolAsync(molecule: Kekule.Molecule): Promise<string> {
+		let molFile = Kekule.IO.saveMimeData(molecule, 'chemical/x-mdl-molfile');
+		return Promise.resolve(molFile);
+	}
+
 	public getSVG(): string {
-		let svg = this.mainSVG.node.outerHTML;
+		//let svg = this.mainSVG.node.outerHTML;
+		//const copy = this.mainSVG.clone();
+		let svg = this.mainSVG.svg((node)=>{
+			console.log(node);
+			if (node.hasClass('interactive')){
+				console.log('found one to remove');
+				node.remove();
+			}
+			if (node.type =="feGaussianBlur" || node.type == "filter"){
+				console.log('found one to remove2');
+				node.remove();
+			}
+			if (node.node.hasAttribute('svgjs:data')){
+				node.node.removeAttribute('svgjs:data');
+			}
+		});
+		
 		return svg;
 	}
 
@@ -671,7 +922,7 @@ export class LewisStructureCanvas extends FASTElement {
 		// use three regular single bonds or 1 dash, 1 wedge, and 1 plain bond.  
 		// So, we need to check for this case if enforcement of perspective drawing is needed.  
 		let atoms = mol.nodes.filter(v => v instanceof Kekule.Atom) as Kekule.Atom[];
-		const badStereoNodes : Kekule.Atom[] = [];
+		const badStereoNodes: Kekule.Atom[] = [];
 		for (const atom of atoms) {
 			const bonds = atom.getLinkedBonds();
 			const lonePairs = atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet);
@@ -706,7 +957,8 @@ export class LewisStructureCanvas extends FASTElement {
 								break;
 							} else {
 								badStereoNodes.push(atom);
-								break;							}
+								break;
+							}
 						} else {
 							break;
 						}
@@ -792,7 +1044,7 @@ export class LewisStructureCanvas extends FASTElement {
 		return badStereoNodes;
 	}
 
-	private compareStructure(mol1: Kekule.Molecule, mol2: Kekule.Molecule): IComparisonResult<Kekule.Atom,Kekule.Bond> {
+	private compareStructure(mol1: Kekule.Molecule, mol2: Kekule.Molecule): IComparisonResult<Kekule.Atom, Kekule.Bond> {
 		let m1 = mol1.clone();
 		let m2 = mol2.clone();
 		//m1.setCanonicalizationIndex(null);
@@ -823,7 +1075,7 @@ export class LewisStructureCanvas extends FASTElement {
 		// const v2 = U.getCompareValue(mol2, options);
 		// let result =  v1 - v2;
 		let result = 0;
-		const resultObj: IComparisonResult<Kekule.Atom,Kekule.Bond> = new ComparisonResult();
+		const resultObj: IComparisonResult<Kekule.Atom, Kekule.Bond> = new ComparisonResult();
 		if (mol1 && mol2) {
 			if (result === 0)  // structure fragment, if with same node and connector count, compare nodes and connectors
 			{
@@ -1035,7 +1287,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 		}
 
-		//draw all lone pairs
+		//draw all lone pairs (AND formal charges)
 		for (const [atom, vertex] of verteces) {
 
 			//console.log('getMarkersOfType error?');
@@ -1065,9 +1317,29 @@ export class LewisStructureCanvas extends FASTElement {
 				});
 				vertex.addLonePair(lonePair);
 			}
+			let formalCharges = atom.getMarkersOfType(Kekule.ChemMarker.Charge, false);
+			for (let m = 0; m < formalCharges.length; m++) {
+				let formalChargeMarker = formalCharges[m];
+				let vertexCenter = vertex.Position;
+				let vect: Position = { x: vertexCenter.x, y: vertexCenter.y };
+				if (formalChargeMarker.coord2D !== undefined) {
+					vect = { x: formalChargeMarker.coord2D.x - vertexCenter.x, y: formalChargeMarker.coord2D.y - vertexCenter.y };
+				}
+				let charge = new FormalCharge({
+					owner: vertex,
+					molecule: molecule,
+					svg: this.mainSVG,
+					charge: formalChargeMarker,
+					radians: 0
+				});
+				vertex.addFormalCharge(charge);
+			}
 
 		}
 		// need to do lone pairs after connectors so that they fit properly.
+
+
+
 
 
 		return molecule;
@@ -1091,28 +1363,31 @@ export class LewisStructureCanvas extends FASTElement {
 			this.$emit('change', e);
 		});
 
+		(this.mainSVG as any).tag = Symbol(); // hack to give svg a unique tag for dependency container 
+		container.register<SettingsService>((this.mainSVG as any).tag, {useValue: this.settingsService});
+
 
 		let onResize = this.onResize.bind(this);
 		window.onresize = onResize;
 
-		settingsService.keyboardDiv = this.keyboardDiv;
+		this.settingsService.keyboardDiv = this.keyboardDiv;
 
-		if (this.readonly){
-			settingsService.setDrawMode(InteractionMode.none);
+		if (this.readonly) {
+			this.settingsService.setDrawMode(InteractionMode.none);
 		}
 
 
 		// click is acting weird, can't prevent it with stopPropagation
 		this.mainSVG.mousedown((ev: MouseEvent) => {
-			if (ev.button != 0){
+			if (ev.button != 0) {
 				ev.preventDefault();
 				return;
 			}
-		
-			if (settingsService.isDrawMode && this.molecule != null) {
+
+			if (this.settingsService.isDrawMode && this.molecule != null) {
 				const bounds = this.mainSVG.node.getBoundingClientRect();
 				var vertex = new Vertex({
-					identity: settingsService.currentElement,
+					identity: this.settingsService.currentElement,
 					x: ev.clientX - bounds.left,
 					y: ev.clientY - bounds.top,
 					molecule: this.molecule,
@@ -1120,7 +1395,7 @@ export class LewisStructureCanvas extends FASTElement {
 				});
 			}
 		});
-		
+
 
 		if (this.shadowRoot != null) {
 			let modeButtons = this.shadowRoot.querySelectorAll<Button>(".toolButton");
@@ -1135,13 +1410,13 @@ export class LewisStructureCanvas extends FASTElement {
 							let option = target.id;
 							switch (option) {
 								case 'draw':
-									settingsService.setDrawMode(InteractionMode.draw);
+									this.settingsService.setDrawMode(InteractionMode.draw);
 									break;
 								case 'move':
-									settingsService.setDrawMode(InteractionMode.move);
+									this.settingsService.setDrawMode(InteractionMode.move);
 									break;
 								case 'erase':
-									settingsService.setDrawMode(InteractionMode.erase);
+									this.settingsService.setDrawMode(InteractionMode.erase);
 									break;
 							}
 							//this.fabricCanvas.discardActiveObject();
@@ -1162,9 +1437,9 @@ export class LewisStructureCanvas extends FASTElement {
 			// 	}
 			// }
 
-			if (this.readAloudButton != null){
+			if (this.readAloudButton != null) {
 				this.readAloudButton.onclick = (ev) => {
-					settingsService.readAloudAtoms = !settingsService.readAloudAtoms;
+					this.settingsService.readAloudAtoms = !this.settingsService.readAloudAtoms;
 				};
 			}
 
@@ -1177,7 +1452,7 @@ export class LewisStructureCanvas extends FASTElement {
 						if (target.appearance != 'accent') {
 							this.resetButtons(electronButtons);
 							target.appearance = 'accent';
-							settingsService.currentBondType = BondType[target.id];
+							this.settingsService.currentBondType = BondType[target.id];
 							if (BondType[target.value] == BondType.lonePair) {
 								for (let i = 0; i < elementButtons.length; i++) {
 									let input = (elementButtons.item(i) as HTMLInputElement);
@@ -1195,9 +1470,9 @@ export class LewisStructureCanvas extends FASTElement {
 			}
 
 
-			settingsService.whenMode.subscribe(mode => {
+			this.settingsService.whenMode.subscribe(mode => {
 				if (mode == InteractionMode.draw) {
-					if (settingsService.currentBondType !== BondType.lonePair) {
+					if (this.settingsService.currentBondType !== BondType.lonePair) {
 						for (let i = 0; i < elementButtons.length; i++) {
 							let input = elementButtons.item(i);
 							(input as any).disabled = false;
@@ -1218,8 +1493,10 @@ export class LewisStructureCanvas extends FASTElement {
 					}
 				}
 			});
-			settingsService.whenElement.subscribe(element => {
-				this.elementTextField.value = element;
+			this.settingsService.whenElement.subscribe(element => {
+				if (this.elementTextField !== undefined) {
+					this.elementTextField.value = element;
+				}
 			});
 		}
 		//});

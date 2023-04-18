@@ -1,11 +1,12 @@
 import { Vertex, IVertexOptions } from "./vertex";
-import { settingsService } from './lewisStructureCanvas';
-import { BondType } from './service/settingsService';
+
+import { BondType, SettingsService } from './service/settingsService';
 import { Subscription, Observable, BehaviorSubject, Subject, combineLatest, observable } from "rxjs";
 import { SVG, Line as SvgLine, Defs as SvgDefs, Pattern as SvgPattern, Polygon as SvgPolygon, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Svg, Text as SvgText, Element, Shape } from '@svgdotjs/svg.js';
 import { IDisposable, Position, Position as Vector2 } from "./interfaces";
 import { isNullOrWhiteSpace } from "@microsoft/fast-web-utilities";
 import { hoverColor } from "./constants";
+import { container } from "tsyringe";
 
 interface IConnectorOptions {
 	vertex1: Vertex;
@@ -60,6 +61,8 @@ export class Connector implements IDisposable {
 	// public get bondType(): BondType{
 	// 	return this._bondType;
 	// }
+	private settingsService: SettingsService;// = container.resolve(SettingsService);
+
 
 	constructor(options: IConnectorOptions) {
 
@@ -75,6 +78,8 @@ export class Connector implements IDisposable {
 		this._vertex2 = options.vertex2;
 
 		this._svg = options.svg;
+		this.settingsService = container.resolve<SettingsService>((this._svg as any).tag);
+
 
 		// creating a new bond or just recreating from Kekule structure?
 		if (options.bond) {
@@ -133,6 +138,7 @@ export class Connector implements IDisposable {
 				add.gaussianBlur(2, 2);
 			});
 		this.adjustSelectableCircle();
+		this._selectableCircle.addClass("interactive");
 
 		this._line1 = this._group.line(this._vertex1.Position.x, this._vertex1.Position.y, this._vertex2.Position.x, this._vertex2.Position.y)
 			.stroke("#000000").attr("pointer-events", "none");
@@ -442,16 +448,16 @@ export class Connector implements IDisposable {
 	mouseDown(ev:MouseEvent){
 		//console.log("mousedown on connector!");
 		ev.stopPropagation();
-		if (settingsService.isEraseMode){
+		if (this.settingsService.isEraseMode){
 			this.dispose();
-		} else if (settingsService.isDrawMode){
+		} else if (this.settingsService.isDrawMode){
 			// change bond order
-			if (settingsService.currentBondType === BondType.lonePair){
+			if (this.settingsService.currentBondType === BondType.lonePair){
 				// don't change a bond into a lone pair.
 				return;
 			}
-			if (this._bondType.value !== settingsService.currentBondType){
-				this.setBondType(settingsService.currentBondType);
+			if (this._bondType.value !== this.settingsService.currentBondType){
+				this.setBondType(this.settingsService.currentBondType);
 				//this._bondType.next(settingsService.currentBondType);
 				this.moveLine(); // just a way to redraw the line
 				//this._bondType = settingsService.currentBondType;

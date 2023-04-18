@@ -1,13 +1,13 @@
 import { Subject, BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { Connector } from "./connector";
-import { settingsService } from './lewisStructureCanvas';
 import { Vertex } from './vertex';
-import { InteractionMode } from './service/settingsService';
+import { InteractionMode, SettingsService } from './service/settingsService';
 //import { SettingsService} from './service/settingsService';
 import { SVG, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element }
 	from '@svgdotjs/svg.js';
 import { IDisposable, Position } from './interfaces';
 import { hoverColor } from './constants';
+import { container } from 'tsyringe';
 
 export interface ILonePairOptions {
 	owner: Vertex;
@@ -42,9 +42,14 @@ export class LonePair implements IDisposable {
 	private _molecule: Kekule.Molecule;
 	private _electrons: Kekule.ChemMarker.UnbondedElectronSet;
 
+	private settingsService: SettingsService;// = container.resolve(SettingsService);
+
+
 	constructor(options: ILonePairOptions) {
 
 		this._svg = options.svg;
+		this.settingsService = container.resolve<SettingsService>((this._svg as any).tag);
+
 		this._group = this._svg.group().attr("aria-label", "Lone Pair");
 		this._circle1 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(Vertex.circleRadius / 3).fill('#000000');
 		this._circle2 = this._group.circle(LonePair.dotRadius * 2).cx(0).cy(-Vertex.circleRadius / 3).fill('#000000');
@@ -54,6 +59,7 @@ export class LonePair implements IDisposable {
 			.filterWith((add) => {
 				add.gaussianBlur(1, 1);
 			});
+		this._selectionEllipse.addClass("interactive");
 
 		this.owner = options.owner;
 		this.radians = options.radians != null ? options.radians : 0;
@@ -114,16 +120,18 @@ export class LonePair implements IDisposable {
 		//console.log("mousedown!");
 
 
-		if (settingsService.isMoveable) {
+		if (this.settingsService.isMoveable) {
 			this._mouseMoveEventRef = this.mouseMoveBondDrawing.bind(this);
 			window.addEventListener('pointermove', this._mouseMoveEventRef);
 			this._mouseUpEventRef = this.mouseUp.bind(this);
 			window.addEventListener('pointerup', this._mouseUpEventRef);
 
-		} else if (settingsService.isEraseMode) {
+		} else if (this.settingsService.isEraseMode) {
 			this.owner.removeAttachment(this);
 			this._ownerSubscription.unsubscribe();
 			this.dispose();
+			this._svg.fire('change', this);
+
 		}
 
 	}
@@ -137,7 +145,7 @@ export class LonePair implements IDisposable {
 		}
 		//this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
 		//console.log(`lonepair pointermove: ${canvasCoords.x}, ${canvasCoords.y} `);
-		if (settingsService.isMoveable) {
+		if (this.settingsService.isMoveable) {
 
 			let vertexCenter = this.owner.Position;
 			let vect = { x: canvasCoords.x - vertexCenter.x, y: canvasCoords.y - vertexCenter.y };

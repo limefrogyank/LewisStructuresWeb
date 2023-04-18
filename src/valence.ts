@@ -17,3 +17,4 @@ export function getValence(atom:Kekule.Atom):number{
         return atom.getValence({ignoreCharge: true});
     }
 }
+

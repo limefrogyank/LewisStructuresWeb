@@ -1,2 +1,5 @@
 node_modules/
-dist/
+dist/build/
+dist/app*
+src/kekule/dist/
+.vscode/

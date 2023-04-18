@@ -1,21 +1,22 @@
 import { Subject, BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { Connector } from "./connector";
-import { settingsService } from './lewisStructureCanvas';
+//import { settingsService } from './lewisStructureCanvas';
 import { Vertex } from './vertex';
-import { BondType, InteractionMode } from './service/settingsService';
+import { BondType, InteractionMode, SettingsService } from './service/settingsService';
 //import { SettingsService} from './service/settingsService';
 import { SVG, ForeignObject as SvgForeignObject, Ellipse as SvgEllipse, Circle as SvgCircle, G as SvgGroup, Runner, Svg, Text as SvgText, Element }
     from '@svgdotjs/svg.js';
 import { IDisposable, Position } from './interfaces';
 import { hoverColor } from './constants';
 import { LonePair } from './lonePair';
+import { container } from 'tsyringe';
 
 export interface IFormalChargeOptions {
     owner: Vertex;
     radians?: number;
     molecule: Kekule.Molecule;
     svg: Svg;
-    charge: Kekule.ChemMarker.Charge
+    charge: Kekule.ChemMarker.Charge;
 }
 
 export class FormalCharge implements IDisposable {
@@ -45,9 +46,14 @@ export class FormalCharge implements IDisposable {
     private _molecule: Kekule.Molecule;
     private _charge: Kekule.ChemMarker.Charge;
 
+    private settingsService: SettingsService;// = container.resolve(SettingsService);
+
     constructor(options: IFormalChargeOptions) {
 
+        
         this._svg = options.svg;
+        this.settingsService = container.resolve<SettingsService>((this._svg as any).tag);
+
         // this._svg.circle(FormalCharge.circleRadius * 2)
         //     .cx(0)
         //     .cy(FormalCharge.chargeDistance)
@@ -85,6 +91,7 @@ export class FormalCharge implements IDisposable {
             .filterWith((add) => {
                 add.gaussianBlur(1, 1);
             });
+        this._selectionCircle.addClass("interactive");
 
         this.owner = options.owner;
         this.radians = options.radians != null ? options.radians : 0;
@@ -178,20 +185,20 @@ export class FormalCharge implements IDisposable {
         console.log("formal charge mousedown!");
 
 
-        if (settingsService.isMoveable) {
+        if (this.settingsService.isMoveable) {
             this._mouseMoveEventRef = this.mouseMoveBondDrawing.bind(this);
             window.addEventListener('pointermove', this._mouseMoveEventRef);
             this._mouseUpEventRef = this.mouseUp.bind(this);
             window.addEventListener('pointerup', this._mouseUpEventRef);
 
-        } else if (settingsService.isEraseMode) {
+        } else if (this.settingsService.isEraseMode) {
             this.owner.removeAttachment(this);
             this._ownerSubscription.unsubscribe();
             this.dispose();
             this._svg.fire("change", this);
         } else {
             // normally, you'd update via vertex, but it makes sense to change charge on the formal charge, too.
-            this._charge.value += settingsService.currentBondType == BondType.positive ? 1 : -1;
+            this._charge.value += this.settingsService.currentBondType == BondType.positive ? 1 : -1;
             this.owner.atom.setCharge(this._charge.value);
             //console.log(chargeMarker.value);
             if (this._charge.value == 0) {
@@ -214,7 +221,7 @@ export class FormalCharge implements IDisposable {
         }
         //this._position.next(new fabric.Point(canvasCoords.x, canvasCoords.y));
         //console.log(`lonepair pointermove: ${canvasCoords.x}, ${canvasCoords.y} `);
-        if (settingsService.isMoveable) {
+        if (this.settingsService.isMoveable) {
 
             let vertexCenter = this.owner.Position;
             let vect = { x: canvasCoords.x - vertexCenter.x, y: canvasCoords.y - vertexCenter.y };

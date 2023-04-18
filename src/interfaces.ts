@@ -7,10 +7,43 @@ export interface Position {
 	y: number;
 }
 
+export interface ICompressedWebworkOutput{
+	programError?: string;
+	empty:boolean;
+	simpleKekule:string;
+	kekuleMimeCompressed:string;
+	// svg:string;
+	perspectiveCorrect:boolean;
+}
+
+export class CompressedWebworkOutput implements ICompressedWebworkOutput{
+	programError?: string;
+	empty:boolean;
+	simpleKekule:string;
+	kekuleMimeCompressed:string;
+	// svg:string;
+	perspectiveCorrect:boolean;
+
+	constructor(init?:Partial<IBlindOutput>){
+		this.empty = false;
+		this.simpleKekule="";
+		this.kekuleMimeCompressed="";
+		// this.svg="";
+		this.perspectiveCorrect=false;
+		Object.assign(this, init);
+	}
+}
+
+
 export interface IBlindOutput{
 	programError?: string;
 	empty:boolean;
 	smiles:string;
+	inchi:string;
+	mol:string;
+	kekuleMime:string;
+	svg:string;
+	atomNums:number[];
 	perspectiveCorrect:boolean;
 	perspectiveErrorAtom?:string[];
 	blindComparisonResult:IComparisonResult<string,string>;
@@ -19,14 +52,25 @@ export class BlindOutput implements IBlindOutput{
 	programError?: string;
 	empty:boolean;
 	smiles:string;
+	inchi:string;
+	mol:string;
+	kekuleMime:string;
+	svg:string;
+	atomNums: number[];
 	perspectiveCorrect:boolean;
 	blindComparisonResult:IComparisonResult<string,string>;
+
 
 	constructor(init?:Partial<IBlindOutput>){
 		this.empty = false;
 		this.smiles="";
+		this.inchi="";
+		this.mol="";
+		this.kekuleMime="";
+		this.svg="";
+		this.atomNums=[];
 		this.perspectiveCorrect=true;
-		
+
 		Object.assign(this, init);
 	}
 }
@@ -38,6 +82,11 @@ export class ComparisonOutput implements IComparisonOutput{
 	programError?: string;
 	empty:boolean;
 	smiles:string;
+	inchi:string;
+	mol:string;
+	kekuleMime:string;
+	svg:string;
+	atomNums: number[];
 	perspectiveCorrect:boolean;
 	comparisonResult?: IComparisonResult<string,string>;
 	blindComparisonResult:IComparisonResult<string,string>;
@@ -45,6 +94,11 @@ export class ComparisonOutput implements IComparisonOutput{
 	constructor(init?:Partial<IComparisonOutput>){
 		this.empty = false;
 		this.smiles="";
+		this.inchi="";
+		this.mol="";
+		this.kekuleMime="";
+		this.svg="";
+		this.atomNums=[];
 		this.perspectiveCorrect=true;
 		
 		Object.assign(this, init);
