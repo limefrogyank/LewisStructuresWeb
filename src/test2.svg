@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:svgjs="http://svgjs.dev/svgjs" width="400" height="400">
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,181,189)">
+        <text font-size="20" x="-6.671875" y="7" style="cursor: default;">
+            <tspan dy="0" x="-6.671875">C</tspan>
+        </text>
+    </g>
+    <defs>
+        <pattern x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="matrix(-0.5160126337951755,0.8565809720999913,-0.8565809720999913,-0.5160126337951755,0,0)" id="SvgjsPattern1027">
+            <rect width="4" height="8" fill="#000000"></rect>
+            <rect width="4" height="8" x="4" y="0" fill="#ffffff00"></rect>
+        </pattern>
+        <pattern x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="matrix(0.946432873861644,0.3229006275527962,-0.3229006275527962,0.946432873861644,0,0)" id="SvgjsPattern1029">
+            <rect width="4" height="8" fill="#000000"></rect>
+            <rect width="4" height="8" x="4" y="0" fill="#ffffff00"></rect>
+        </pattern>
+    </defs>
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,272,186)" class="">
+        <text font-size="20" x="-5.5625" y="7" style="cursor: default;">
+            <tspan dy="0" x="-5.5625">F</tspan>
+        </text>
+    </g>
+    <g tabindex="0" aria-label="Bond" class="">
+        <polygon points="\n\t\t\t\t\t\t195.99185544870727,188.50576300718546, \n\t\t\t\t\t\t256.81044975416694,180.49749481333163,\n\t\t\t\t\t\t257.2058393484185,192.49097917229744" pointer-events="none" fill="#000000"></polygon>
+    </g>
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,210,265)" class="">
+        <text font-size="20" x="-5.5625" y="7" style="cursor: default;">
+            <tspan dy="0" x="-5.5625">F</tspan>
+        </text>
+    </g>
+    <g tabindex="0" aria-label="Bond" class="">
+        <line x1="181" y1="189" x2="210" y2="265" stroke="#000000" pointer-events="none" stroke-dasharray="0 15 36"></line>
+    </g>
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,121,254)" class="">
+        <text font-size="20" x="-5.5625" y="7" style="cursor: default;">
+            <tspan dy="0" x="-5.5625">F</tspan>
+        </text>
+    </g>
+    <g tabindex="0" aria-label="Bond" class="">
+        <polygon points="\n\t\t\t\t\t\t170.825798459004,200.02205166941232, \n\t\t\t\t\t\t135.58302220876092,247.04762894698607,\n\t\t\t\t\t\t126.76538087323107,238.9082677141893" pointer-events="none" fill="#000000"></polygon>
+    </g>
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,96,160)" class="">
+        <text font-size="20" x="-5.5625" y="7" style="cursor: default;">
+            <tspan dy="0" x="-5.5625">F</tspan>
+        </text>
+    </g>
+    <g tabindex="0" aria-label="Bond" class="">
+        <polygon points="\n\t\t\t\t\t\t166.80350689207535,184.15649058670806, \n\t\t\t\t\t\t108.25908934260788,170.5221066564618,\n\t\t\t\t\t\t112.13389687324143,159.16491217012208" pointer-events="none" fill="url(&quot;#SvgjsPattern1029&quot;)"></polygon>
+    </g>
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,163,96)" class="">
+        <text font-size="20" x="-5.5625" y="7" style="cursor: default;">
+            <tspan dy="0" x="-5.5625">F</tspan>
+        </text>
+    </g>
+    <g tabindex="0" aria-label="Bond" class="">
+        <line x1="181" y1="189" x2="163" y2="96" stroke="#000000" pointer-events="none" stroke-dasharray="0 15 49"></line>
+    </g>
+    <g tabindex="0" aria-label="Atom" transform="matrix(1,0,0,1,231,106)" class="">
+        <text font-size="20" x="-5.5625" y="7" style="cursor: default;">
+            <tspan dy="0" x="-5.5625">F</tspan>
+        </text>
+    </g>
+    <g tabindex="0" aria-label="Bond" class="">
+        <polygon points="\n\t\t\t\t\t\t188.74018950692763,176.15128541850012, \n\t\t\t\t\t\t218.12032466047242,115.75263877872882,\n\t\t\t\t\t\t228.3992963256723,121.94479038427093" pointer-events="none" fill="url(&quot;#SvgjsPattern1027&quot;)"></polygon>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.8565809720999914,-0.5160126337951755,0.5160126337951755,-0.8565809720999914,216.43812347430014,97.22778522548202)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.5160126337951754,-0.8565809720999914,0.8565809720999914,0.5160126337951754,239.77221477451798,91.43812347430014)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.8565809720999914,0.5160126337951754,-0.5160126337951754,0.8565809720999914,245.56187652569986,114.77221477451798)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.9817798505902814,0.19002190656586107,-0.19002190656586107,-0.9817798505902814,146.3097425399652,99.23037241161964)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.19002190656586113,-0.9817798505902814,0.9817798505902814,-0.19002190656586113,159.76962758838036,79.30974253996521)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.9817798505902813,-0.19002190656586118,0.19002190656586118,0.9817798505902813,179.6902574600348,92.76962758838036)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.3229006275527961,0.946432873861644,-0.946432873861644,-0.3229006275527961,90.51068933160246,176.08935885564796)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.9464328738616439,-0.32290062755279625,0.32290062755279625,-0.9464328738616439,79.91064114435206,154.51068933160246)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.322900627552797,-0.9464328738616437,0.9464328738616437,0.322900627552797,101.48931066839754,143.91064114435204)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.7348034446274879,0.6782801027330658,-0.6782801027330658,0.7348034446274879,133.4916585586673,265.53076174646213)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.6782801027330658,0.7348034446274879,-0.7348034446274879,-0.6782801027330658,109.46923825353788,266.49165855866727)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.7348034446274883,-0.6782801027330655,0.6782801027330655,-0.7348034446274883,108.5083414413327,242.46923825353787)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.9342928493282385,-0.35650648198051227,0.35650648198051227,0.9342928493282385,225.88297843858007,258.9393898063313)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.3565064819805124,0.9342928493282385,-0.9342928493282385,0.3565064819805124,216.0606101936687,280.88297843858004)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.9342928493282385,0.35650648198051244,-0.35650648198051244,-0.9342928493282385,194.11702156141993,271.0606101936687)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(-0.03294913285430289,-0.9994570299138175,0.9994570299138175,-0.03294913285430289,271.43986474147687,169.0092304914651)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.9994570299138175,-0.032949132854302954,0.032949132854302954,0.9994570299138175,288.9907695085349,185.43986474147687)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+    <g aria-label="Lone Pair" transform="matrix(0.03294913285430233,0.9994570299138176,-0.9994570299138176,0.03294913285430233,272.56013525852313,202.9907695085349)">
+        <circle r="3" cx="0" cy="5" fill="#000000"></circle>
+        <circle r="3" cx="0" cy="-5" fill="#000000"></circle>
+    </g>
+</svg>
