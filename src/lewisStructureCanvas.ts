@@ -327,7 +327,8 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr visibleElementSelector: boolean = false;
 
 	@observable debugString: string = "";
-	@attr smiles: string;
+	@attr smiles: string;  // DEPRECATED - NOT USED ANYMORE
+	@attr mol: string|null = null;
 	@attr({ mode: 'boolean' }) readonly: boolean = false;
 
 	debug: boolean = false;
@@ -480,7 +481,7 @@ export class LewisStructureCanvas extends FASTElement {
 		}
 
 
-		const output: ICompressedWebworkOutput = new CompressedWebworkOutput({});
+		const output: ICompressedWebworkOutput = new CompressedWebworkOutput({perspectiveCorrect:true});
 		const badNodes = this.checkDashWedgeBonds(this.molecule);
 		if (badNodes.length > 0) {
 			output.programError = "Perspective is not drawn correctly.";
@@ -877,13 +878,13 @@ export class LewisStructureCanvas extends FASTElement {
 		//let svg = this.mainSVG.node.outerHTML;
 		//const copy = this.mainSVG.clone();
 		let svg = this.mainSVG.svg((node)=>{
-			console.log(node);
+			//console.log(node);
 			if (node.hasClass('interactive')){
-				console.log('found one to remove');
+				//console.log('found one to remove');
 				node.remove();
 			}
 			if (node.type =="feGaussianBlur" || node.type == "filter"){
-				console.log('found one to remove2');
+				//console.log('found one to remove2');
 				node.remove();
 			}
 			if (node.node.hasAttribute('svgjs:data')){
@@ -1499,7 +1500,12 @@ export class LewisStructureCanvas extends FASTElement {
 				}
 			});
 		}
-		//});
+
+		// LOAD MOLECULE IF ATTR are set
+		if (this.mol != null) {
+			this.loadMoleculeUsingMolAsync(this.mol, true);
+		}
+
 	}
 
 	resetButtons(buttons: NodeListOf<Button>) {
