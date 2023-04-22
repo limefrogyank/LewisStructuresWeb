@@ -331,6 +331,9 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr mol: string|null = null;
 	@attr({ mode: 'boolean' }) readonly: boolean = false;
 
+	@attr({ mode: 'boolean', attribute: 'show-formal-charge'}) useFormalCharge: boolean = false;
+	@attr({ mode: 'boolean', attribute: 'flat'}) noPerspective: boolean = false;
+
 	debug: boolean = false;
 
 	periodicTableButton: HTMLButtonElement;
@@ -370,7 +373,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 	public async loadMoleculeUsingSmilesAsync(smiles: string) {
 		let tempKekuleMolecule = await this.loadSmilesAsync(smiles);
-		addLonePairsAndRedraw(tempKekuleMolecule, false);
+		addLonePairsAndRedraw(tempKekuleMolecule, { useFlat: false, showFormalCharges: this.useFormalCharge });
 		this.clearMolecule();
 		this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
 	}
@@ -399,7 +402,7 @@ export class LewisStructureCanvas extends FASTElement {
 					resolve(result);
 				};
 			});
-			addLonePairsAndRedraw(kekule, false);
+			addLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
 			this.clearMolecule();
 			this.molecule = this.drawMolecule(kekule, this.mainSVG, true);
 		} else {
@@ -411,7 +414,7 @@ export class LewisStructureCanvas extends FASTElement {
 	public async loadOne() {
 		this.molecule = new Kekule.Molecule();
 		let tempKekuleMolecule = await this.loadSmilesAsync('[CH3-]');
-		addLonePairsAndRedraw(tempKekuleMolecule, false);
+		addLonePairsAndRedraw(tempKekuleMolecule, { useFlat: false, showFormalCharges: this.useFormalCharge });
 		this.clearMolecule();
 		this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
 	}
@@ -420,7 +423,7 @@ export class LewisStructureCanvas extends FASTElement {
 		for (const mimeTest of mimeTests) {
 			this.molecule = new Kekule.Molecule();
 			let tempKekuleMolecule = await this.loadSmilesAsync(mimeTest.smiles);
-			addLonePairsAndRedraw(tempKekuleMolecule, false);
+			addLonePairsAndRedraw(tempKekuleMolecule, { useFlat: false, showFormalCharges: this.useFormalCharge });
 			this.clearMolecule();
 			this.molecule = this.drawMolecule(tempKekuleMolecule, this.mainSVG, true);
 			let testIndex = 0;
@@ -585,7 +588,7 @@ export class LewisStructureCanvas extends FASTElement {
 		output.atomNums = this.molecule.nodes.filter(x=>x instanceof Kekule.Atom).map(x => (x as Kekule.Atom).atomicNumber);
 
 		// add lone pairs, and compare with original
-		addLonePairsAndRedraw(tempKekuleMolecule, false);
+		addLonePairsAndRedraw(tempKekuleMolecule, { useFlat: false, showFormalCharges: this.useFormalCharge });
 		const comparisonResult = this.compareStructure(this.molecule, tempKekuleMolecule);
 		output.blindComparisonResult = ComparisonResult.toStringOutput(comparisonResult);
 		if (output.blindComparisonResult.lonePairCountError) {
@@ -622,8 +625,8 @@ export class LewisStructureCanvas extends FASTElement {
 		let output: IComparisonOutput = new ComparisonOutput({ smiles: this.smiles });
 
 		let molToCompareWith = await this.loadSmilesAsync(this.smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
-		addLonePairsAndRedraw(molToCompareWith, false);
-
+		addLonePairsAndRedraw(molToCompareWith, { useFlat: false, showFormalCharges: this.useFormalCharge });
+		
 		output.comparisonResult = ComparisonResult.toStringOutput(this.compareStructure(this.molecule, molToCompareWith));
 
 		const badNodes = this.checkDashWedgeBonds(this.molecule);
@@ -645,7 +648,7 @@ export class LewisStructureCanvas extends FASTElement {
 		let res = await this.loadSmilesAsync(samples[index]);
 		console.log(res);
 		let clone = res.clone();
-		addLonePairsAndRedraw(clone, false);
+		addLonePairsAndRedraw(clone, { useFlat: false, showFormalCharges: this.useFormalCharge });
 		console.log(clone);
 		this.molecule = this.drawMolecule(clone, this.mainSVG, true);
 
@@ -901,7 +904,7 @@ export class LewisStructureCanvas extends FASTElement {
 		}
 		//console.log(smiles);
 		let molToCompareWith = await this.loadSmilesAsync(smiles); //Kekule.IO.loadFormatData(smiles, "chemical/x-daylight-smiles");
-		addLonePairsAndRedraw(molToCompareWith, false);
+		addLonePairsAndRedraw(molToCompareWith, { useFlat: false, showFormalCharges: this.useFormalCharge });
 		//console.log('Loaded');
 		//console.log(this.molecule);
 		//console.log(molToCompareWith);

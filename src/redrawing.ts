@@ -4,8 +4,10 @@ function shiftAndScale(atom:Kekule.Atom, vector:{x:number,y:number}, length:numb
     return {x: atom.coord2D.x + vector.x * length, y:-vector.y* length + atom.coord2D.y};
 }
 
-export function addLonePairsAndRedraw(molecule:Kekule.Molecule, useFlat:boolean=true){
+export function addLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat:boolean, showFormalCharges:boolean} = {useFlat:true, showFormalCharges:true}){
 		
+    const useFlat=options.useFlat;
+    const showFormalCharges = options.showFormalCharges;
     let centerAtoms: Kekule.Atom[] = [];
     //let centerAtomConnections = 0;
     //find "center" atoms and add lone pairs to all atoms as needed
@@ -61,6 +63,12 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, useFlat:boolean=
         for (let j=0; j<lonePairsToAdd;j++){
             let lonepair = new Kekule.ChemMarker.UnbondedElectronSet();
             atom.appendMarker(lonepair);
+        }
+        //add formal charge where needed
+        if (showFormalCharges){
+            let formalCharge = new Kekule.ChemMarker.Charge();
+            formalCharge.value = atom.charge;
+            atom.appendMarker(formalCharge);
         }
     }
 
