@@ -65,7 +65,7 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat
             atom.appendMarker(lonepair);
         }
         //add formal charge where needed
-        if (showFormalCharges){
+        if (showFormalCharges && atom.charge != 0){
             let formalCharge = new Kekule.ChemMarker.Charge();
             formalCharge.value = atom.charge;
             atom.appendMarker(formalCharge);
