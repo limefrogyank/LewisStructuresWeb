@@ -331,7 +331,7 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr mol: string|null = null;
 	@attr({ mode: 'boolean' }) readonly: boolean = false;
 
-	@attr({ mode: 'boolean', attribute: 'show-formal-charge'}) useFormalCharge: boolean = false;
+	@attr({ mode: 'boolean', attribute: 'show-formal-charges'}) useFormalCharge: boolean = false;
 	@attr({ mode: 'boolean', attribute: 'flat'}) noPerspective: boolean = false;
 
 	debug: boolean = false;
