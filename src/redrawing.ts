@@ -392,6 +392,7 @@ export function transformLonePairsAndRedraw(molecule:Kekule.Molecule, options:{u
     const showFormalCharges = options.showFormalCharges;
     const centerAtoms: Kekule.Atom[] = [];
     const fakeAtomsToRemove:Kekule.Atom[] = [];
+    const fakeBondsToRemove:Kekule.ChemStructureConnector[] = [];
     for (let i=0; i<molecule.getNodeCount(); i++){
         let atom = <Kekule.Atom>molecule.getNodeAt(i);
         if (atom.linkedSiblings.length > 1){
@@ -400,12 +401,15 @@ export function transformLonePairsAndRedraw(molecule:Kekule.Molecule, options:{u
         // this is the lone pair hack
         if (atom.symbol == "A"){
             const linkedSibling = atom.linkedSiblings[0];
+            const connector = atom.getLinkedConnectorAt(0);
             let lonepair = new Kekule.ChemMarker.UnbondedElectronSet();
             linkedSibling.appendMarker(lonepair);
             fakeAtomsToRemove.push(atom);
+            fakeBondsToRemove.push(connector);
         }
     }
     fakeAtomsToRemove.forEach(x=> molecule.removeNode(x));
+    fakeBondsToRemove.forEach(x=> molecule.removeConnector(x));
 
     adjustBondAngles(molecule, centerAtoms, options);
 
