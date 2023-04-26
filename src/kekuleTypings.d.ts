@@ -229,6 +229,7 @@ declare module Kekule {
 		massNumber: number;
 		atomType: any;
 		hybridizationType: number;
+        linkedSiblings: Kekule.Atom[];
 		constructor(id?: string, symbol?: string, massNumber?: number);
 		setSymbol(element: string): Atom;
 		setCoord2D(coords: Coordinates2D): Atom;

@@ -7,7 +7,7 @@ import { provideFluentDesignSystem, fluentButton, fluentTextField, fluentDialog,
 import * as obm from './kekule/dist/extra/openbabel.js';
 import { Button, TextField } from '@fluentui/web-components';
 import { obMolToCAN, obMolToInChI, obMolToKekule } from './openBabelStuff';
-import { addLonePairsAndRedraw } from './redrawing';
+import { addLonePairsAndRedraw, transformLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
@@ -402,7 +402,8 @@ export class LewisStructureCanvas extends FASTElement {
 					resolve(result);
 				};
 			});
-			addLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
+			transformLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
+			//addLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
 			this.clearMolecule();
 			this.molecule = this.drawMolecule(kekule, this.mainSVG, true);
 		} else {
@@ -471,17 +472,17 @@ export class LewisStructureCanvas extends FASTElement {
 		// However, adding this explicit atoms option will create non-standard SMILES.  i.e. [NH4+] will output as [H][N+]([H])([H])[H]
 		// So, we should check that the number of atoms is the same before and after conversion.  If not, add the option and redo the conversion.
 
-		let smiles = await this.exportCanonicalSmilesAsync(this.molecule);
-		if (smiles == null || smiles == "") {
-			return new CompressedWebworkOutput({ empty: true, programError: "Structure does not correspond to correct any valid structure." });
-		}
+		// let smiles = await this.exportCanonicalSmilesAsync(this.molecule);
+		// if (smiles == null || smiles == "") {
+		// 	return new CompressedWebworkOutput({ empty: true, programError: "Structure does not correspond to correct any valid structure." });
+		// }
 
-		// create kekule structure for smiles determined and verify it has the same number of atoms, otherwise redo conversion with explicit atoms
-		let tempKekuleMolecule = await this.loadSmilesAsync(smiles);
-		if (tempKekuleMolecule.getNodeCount() !== this.molecule.getNodeCount()) {
-			smiles = await this.exportCanonicalSmilesAsync(this.molecule, true);
-			tempKekuleMolecule = await this.loadSmilesAsync(smiles);
-		}
+		// // create kekule structure for smiles determined and verify it has the same number of atoms, otherwise redo conversion with explicit atoms
+		// let tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		// if (tempKekuleMolecule.getNodeCount() !== this.molecule.getNodeCount()) {
+		// 	smiles = await this.exportCanonicalSmilesAsync(this.molecule, true);
+		// 	tempKekuleMolecule = await this.loadSmilesAsync(smiles);
+		// }
 
 
 		const output: ICompressedWebworkOutput = new CompressedWebworkOutput({perspectiveCorrect:true});

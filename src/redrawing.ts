@@ -4,75 +4,12 @@ function shiftAndScale(atom:Kekule.Atom, vector:{x:number,y:number}, length:numb
     return {x: atom.coord2D.x + vector.x * length, y:-vector.y* length + atom.coord2D.y};
 }
 
-export function addLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat:boolean, showFormalCharges:boolean} = {useFlat:true, showFormalCharges:true}){
-		
+function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] , options:{useFlat:boolean, showFormalCharges:boolean} = {useFlat:true, showFormalCharges:true}){
+    		
     const useFlat=options.useFlat;
     const showFormalCharges = options.showFormalCharges;
-    let centerAtoms: Kekule.Atom[] = [];
-    //let centerAtomConnections = 0;
-    //find "center" atoms and add lone pairs to all atoms as needed
-    for (let i=0; i<molecule.getNodeCount(); i++){
-        let atom = <Kekule.Atom>molecule.getNodeAt(i);
-        let linked = atom.getLinkedChemNodes(false);
-        if (linked.length > 1){
-            //centerAtomConnections = linked.length;
-            //centerAtoms = [];
-            centerAtoms.push(atom);
-        // } else if (linked.length == centerAtomConnections){
-        //     centerAtoms.push(atom);
-        }
 
-        //add lone pairs where needed
-        let bonds = atom.getLinkedBonds();
-        let totalPairs = bonds.reduce((p,c)=> {
-            return p + c.bondOrder;
-        }, 0);
-        let element = new Kekule.Element(atom.symbol);
-        let valenceElectrons = 0;
-        switch (element.group){
-            case 1:
-                valenceElectrons =1;
-                break;
-            case 2:
-                valenceElectrons =2;
-                break;
-            case 13:
-                valenceElectrons =3;
-                break;
-            case 14:
-                valenceElectrons =4;
-                break;
-            case 15:
-                valenceElectrons =5;
-                break;
-            case 16:
-                valenceElectrons =6;
-                break;
-            case 17:
-                valenceElectrons =7;
-                break;
-            case 18:
-                valenceElectrons =8;
-                break;
-            default:
-                valenceElectrons = 0;
-                break;
-        }
-        let lonePairsToAdd = (valenceElectrons - atom.charge - totalPairs ) / 2;
-        //console.log(`Adding ${lonePairsToAdd} lone pairs.`);
-        for (let j=0; j<lonePairsToAdd;j++){
-            let lonepair = new Kekule.ChemMarker.UnbondedElectronSet();
-            atom.appendMarker(lonepair);
-        }
-        //add formal charge where needed
-        if (showFormalCharges && atom.charge != 0){
-            let formalCharge = new Kekule.ChemMarker.Charge();
-            formalCharge.value = atom.charge;
-            atom.appendMarker(formalCharge);
-        }
-    }
-
-    //check all "central" atoms for bond adjustments i.e. tetrahedral, trigonal pyramid, trigonal bipyramid, etc.
+     //check all "central" atoms for bond adjustments i.e. tetrahedral, trigonal pyramid, trigonal bipyramid, etc.
     //anything with lone pairs is really screwed up because it gets drawn as if there are none.
     for (let i=0; i<centerAtoms.length; i++){
         let centerAtom = centerAtoms[i];
@@ -91,7 +28,7 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat
                 
                 //redraw them all.
                 //let vectors = getTetrahedralVectors(true);
-                let vectors =generateTerminalTetrahedralVectors(0,useFlat,true);
+                let vectors = generateTerminalTetrahedralVectors(0,useFlat,true);
                 linked[0].coord2D = {x: centerAtom.coord2D.x + vectors[0].x * length, y:-vectors[0].y* length + centerAtom.coord2D.y};
                 linked[1].coord2D = {x: centerAtom.coord2D.x + vectors[1].x * length, y:-vectors[1].y* length + centerAtom.coord2D.y};
                 linked[2].coord2D = {x: centerAtom.coord2D.x + vectors[2].x * length, y:-vectors[2].y* length + centerAtom.coord2D.y};
@@ -448,4 +385,100 @@ export function addLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat
         }
         
     }
+}
+
+export function transformLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat:boolean, showFormalCharges:boolean} = {useFlat:true, showFormalCharges:true}){
+    const useFlat=options.useFlat;
+    const showFormalCharges = options.showFormalCharges;
+    const centerAtoms: Kekule.Atom[] = [];
+    const fakeAtomsToRemove:Kekule.Atom[] = [];
+    for (let i=0; i<molecule.getNodeCount(); i++){
+        let atom = <Kekule.Atom>molecule.getNodeAt(i);
+        if (atom.linkedSiblings.length > 1){
+            centerAtoms.push(atom);
+        }
+        // this is the lone pair hack
+        if (atom.symbol == "A"){
+            const linkedSibling = atom.linkedSiblings[0];
+            let lonepair = new Kekule.ChemMarker.UnbondedElectronSet();
+            linkedSibling.appendMarker(lonepair);
+            fakeAtomsToRemove.push(atom);
+        }
+    }
+    fakeAtomsToRemove.forEach(x=> molecule.removeNode(x));
+
+    adjustBondAngles(molecule, centerAtoms, options);
+
+}
+
+export function addLonePairsAndRedraw(molecule:Kekule.Molecule, options:{useFlat:boolean, showFormalCharges:boolean} = {useFlat:true, showFormalCharges:true}){
+		
+    const useFlat=options.useFlat;
+    const showFormalCharges = options.showFormalCharges;
+    const centerAtoms: Kekule.Atom[] = [];
+    //let centerAtomConnections = 0;
+    //find "center" atoms and add lone pairs to all atoms as needed
+    for (let i=0; i<molecule.getNodeCount(); i++){
+        let atom = <Kekule.Atom>molecule.getNodeAt(i);
+        let linked = atom.getLinkedChemNodes(false);
+        if (linked.length > 1){
+            //centerAtomConnections = linked.length;
+            //centerAtoms = [];
+            centerAtoms.push(atom);
+        // } else if (linked.length == centerAtomConnections){
+        //     centerAtoms.push(atom);
+        }
+
+        //add lone pairs where needed
+        let bonds = atom.getLinkedBonds();
+        let totalPairs = bonds.reduce((p,c)=> {
+            return p + c.bondOrder;
+        }, 0);
+        let element = new Kekule.Element(atom.symbol);
+        let valenceElectrons = 0;
+        switch (element.group){
+            case 1:
+                valenceElectrons =1;
+                break;
+            case 2:
+                valenceElectrons =2;
+                break;
+            case 13:
+                valenceElectrons =3;
+                break;
+            case 14:
+                valenceElectrons =4;
+                break;
+            case 15:
+                valenceElectrons =5;
+                break;
+            case 16:
+                valenceElectrons =6;
+                break;
+            case 17:
+                valenceElectrons =7;
+                break;
+            case 18:
+                valenceElectrons =8;
+                break;
+            default:
+                valenceElectrons = 0;
+                break;
+        }
+        let lonePairsToAdd = (valenceElectrons - atom.charge - totalPairs ) / 2;
+        //console.log(`Adding ${lonePairsToAdd} lone pairs.`);
+        for (let j=0; j<lonePairsToAdd;j++){
+            let lonepair = new Kekule.ChemMarker.UnbondedElectronSet();
+            atom.appendMarker(lonepair);
+        }
+        //add formal charge where needed
+        if (showFormalCharges && atom.charge != 0){
+            let formalCharge = new Kekule.ChemMarker.Charge();
+            formalCharge.value = atom.charge;
+            atom.appendMarker(formalCharge);
+        }
+    }
+
+    adjustBondAngles(molecule, centerAtoms, options);
+   
 }
