@@ -331,6 +331,7 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr mol: string|null = null;
 	@attr({ mode: 'boolean' }) readonly: boolean = false;
 
+	@attr({mode:'boolean', attribute: 'explicit-lone-pairs'}) explicitLonePairs: boolean = false;
 	@attr({ mode: 'boolean', attribute: 'show-formal-charges'}) useFormalCharge: boolean = false;
 	@attr({ mode: 'boolean', attribute: 'flat'}) noPerspective: boolean = false;
 
@@ -402,8 +403,11 @@ export class LewisStructureCanvas extends FASTElement {
 					resolve(result);
 				};
 			});
-			transformLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
-			//addLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
+			if (this.explicitLonePairs){
+				transformLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
+			} else {
+				addLonePairsAndRedraw(kekule, { useFlat: false, showFormalCharges: this.useFormalCharge });
+			}
 			this.clearMolecule();
 			this.molecule = this.drawMolecule(kekule, this.mainSVG, true);
 		} else {
