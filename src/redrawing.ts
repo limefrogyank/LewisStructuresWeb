@@ -404,16 +404,20 @@ export function transformLonePairsAndRedraw(molecule:Kekule.Molecule, options:{u
             linkedSibling.appendMarker(lonepair);
             fakeAtomsToRemove.push(atom);
             fakeBondsToRemove.push(connector);
-        }
+        }        
+    }
+    
+    fakeAtomsToRemove.forEach(x=> molecule.removeNode(x));
+    fakeBondsToRemove.forEach(x=> molecule.removeConnector(x));
+
+    for (let i=0; i<molecule.getNodeCount(); i++){
+        let atom = <Kekule.Atom>molecule.getNodeAt(i);
 
         if (atom.linkedSiblings.length > 1){
             centerAtoms.push(atom);
         }
-        
     }
-    fakeAtomsToRemove.forEach(x=> molecule.removeNode(x));
-    fakeBondsToRemove.forEach(x=> molecule.removeConnector(x));
-
+    
     adjustBondAngles(molecule, centerAtoms, options);
 
 }
