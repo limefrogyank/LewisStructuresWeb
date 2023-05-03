@@ -405,8 +405,15 @@ export function transformLonePairsAndRedraw(molecule:Kekule.Molecule, options:{u
             fakeAtomsToRemove.push(atom);
             fakeBondsToRemove.push(connector);
         }        
+
+        //add formal charge where needed
+        if (showFormalCharges && atom.charge != 0){
+            let formalCharge = new Kekule.ChemMarker.Charge();
+            formalCharge.value = atom.charge;
+            atom.appendMarker(formalCharge);
+        }
     }
-    
+
     fakeAtomsToRemove.forEach(x=> molecule.removeNode(x));
     fakeBondsToRemove.forEach(x=> molecule.removeConnector(x));
 
