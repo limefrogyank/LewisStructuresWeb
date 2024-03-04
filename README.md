@@ -8,14 +8,18 @@ Currently, this is being used in WeBWorK along with accompanying contextChemical
 https://limefrogyank.github.io/LewisStructuresWeb/
 
 ## Usage ##
-HTML:
+### HTML:
 ```
 <h5>
 Question:  Draw the Lewis Structure for ammonia, NH₃.   
 </h5>
 <lewis-structure-canvas smiles="N"></lewis-structure-canvas>
 ```
-Javascript:
+
+Leave the smiles parameter blank to have a student draw their own.  With the smiles parameter filled, it will attempt to create a Lewis Structure using a combination of OpenBabel and KekuleJS.  
+
+
+### Javascript:
 (after student has drawn a structure)
 ```
 const lewisStructureCanvas = document.getElementsByTagName("lewis-structure-canvas")[0];
