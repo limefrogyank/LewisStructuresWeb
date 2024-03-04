@@ -2,6 +2,8 @@
 
 This is a web element that is designed for homework/quiz purposes.  A student will be able to draw a Lewis Structure.  The web element can then return a Canonical SMILES representation of the structure (if it exists) along with information about perspective.  
 
+Currently, this is being used in WeBWorK along with accompanying contextChemical.pl and parserLewisStructureTool.pl to grade student's drawings.  See https://github.com/WeBWorK-for-Chemistry/WeBWorKChemistry for more information.
+
 ## Demo ##
 https://limefrogyank.github.io/LewisStructuresWeb/
 
