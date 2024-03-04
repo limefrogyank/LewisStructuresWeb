@@ -2,6 +2,9 @@
 
 This is a web element that is designed for homework/quiz purposes.  A student will be able to draw a Lewis Structure.  The web element can then return a Canonical SMILES representation of the structure (if it exists) along with information about perspective.  
 
+## Demo ##
+https://limefrogyank.github.io/LewisStructuresWeb/
+
 ## Usage ##
 HTML:
 ```
