@@ -4,18 +4,19 @@ import { PeriodicTableModal } from './periodicTableModal';
 import { Vertex } from './vertex';
 import { InteractionMode, SettingsService, BondType } from './service/settingsService';
 import { provideFluentDesignSystem, fluentButton, fluentTextField, fluentDialog, fluentMenu, fluentMenuItem } from '@fluentui/web-components';
-import * as obm from './kekule/dist/extra/openbabel.js';
+//import * as obm from './kekule/dist/extra/openbabel.js';
+//import * as obm2 from './openbabel.js';
+import { Kekule } from 'kekule';
 import { Button, TextField } from '@fluentui/web-components';
 import { obMolToCAN, obMolToInChI, obMolToKekule } from './openBabelStuff';
 import { addLonePairsAndRedraw, transformLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
-import './openbabel.js'
+//import './openbabel.js'
 import { Connector } from './connector';
 import { BlindOutput, ComparisonOutput, ComparisonResult, CompressedWebworkOutput, IBlindOutput, IComparisonOutput, IComparisonResult, ICompressedWebworkOutput, Position } from './interfaces';
 import { LonePair } from './lonePair';
-import { Kekule as k } from 'kekule';
 import { mimeTests, samples } from './tests';
 import { negativeCircleSvg, positiveCircleSvg } from './svgs';
 import { getValence } from './valence';
@@ -25,15 +26,44 @@ import { container } from "tsyringe";
 //import * as zlib from "zlib";
 import {Buffer} from "buffer";
 import * as pako from "pako/dist/pako.js";
-import * as LZ77 from "lz77";
-k; //loads kekule stuff, prevents tree-shaking.
-console.log(pako);
+
+
+Kekule;
+//k; //loads kekule stuff, prevents tree-shaking.
+
 declare global {
 	interface Window {
 		//Kekule: Kekule;
 		OpenBabelModule(): OpenBabelModule;
 	}
 }
+//(window as any).kek = Kekule;
+if (import.meta.env.MODE === 'development') {
+	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:5173/src/openbabel.js');
+} else {
+	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:3000/openbabel.js');
+}
+//obm2;
+
+Kekule.OpenBabel.enable(()=> console.log("OpenBabelModule Loaded!"));
+//Kekule.OpenBabel.setModule(OpenBabelModule);
+const loadModule = new Promise<void>((resolve,reject)=>{
+	waitForModule(resolve);
+});
+function waitForModule(resolve:()=>void){
+	setTimeout(()=>{
+		
+		if (window.OpenBabelModule !== undefined){
+			return;
+		} else {
+			console.log("OpenBabelModule not loaded yet")
+			waitForModule(resolve);
+		}
+	}, 100);
+}
+
+//(window as any).ob = Kekule.OpenBabel;
+//(window as any).obm2 = window.OpenBabelModule();
 export interface OpenBabelModule {
 	//new():OpenBabelModule;
 	OBMol: OpenBabelModule.OBMol;
@@ -296,8 +326,8 @@ ${x => x.debugString}
 //settingsService.test = "setting new text";
 
 
-obm;
-(window as any).OpenBabelModule = obm;
+//obm;
+//(window as any).OpenBabelModule = obm;
 
 
 
@@ -1363,11 +1393,15 @@ export class LewisStructureCanvas extends FASTElement {
 		//console.log('CHANGED: ' + newValue);
 	}
 
-	connectedCallback() {
+	async connectedCallback() {
 		super.connectedCallback();
+		
 		this.mainSVG = SVG();
 		this.mainSVG.addTo(this.svgContainer);
 		this.mainSVG.size(this.width, this.height);
+
+
+
 		this.mainSVG.on('change', (e: any) => {
 			this.$emit('change', e);
 		});
@@ -1509,6 +1543,7 @@ export class LewisStructureCanvas extends FASTElement {
 			});
 		}
 
+		await loadModule;
 		// LOAD MOLECULE IF ATTR are set
 		if (this.mol != null) {
 			this.loadMoleculeUsingMolAsync(this.mol, true);

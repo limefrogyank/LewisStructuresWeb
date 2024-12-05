@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>LewisStructuresWeb</title>
+  <script type="module" crossorigin src="./index.js"></script>
+</head>
+
+<body style="background:#EEEEEE">
+  <lewis-structure-canvas show-formal-charges></lewis-structure-canvas>
+  <script>
+    window.addEventListener('load', () => {
+      const lewisStructureCanvas = document.querySelector('lewis-structure-canvas');
+      lewisStructureCanvas.addEventListener('change', (e) => {
+        console.log(e.detail);
+      });
+    }
+    );
+    
+  </script>
+</body>
+
+</html>

@@ -1,5 +1,4 @@
 node_modules/
 dist/build/
 dist/app*
-src/kekule/dist/
 .vscode/
