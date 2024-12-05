@@ -551,28 +551,31 @@ export class LewisStructureCanvas extends FASTElement {
 		delete json["coordPos3D"];
 		delete json["renderOptions"];
 		delete json["parity"];
-		for (const node of json["ctab"]["nodes"]){
-			delete node["coordPos2D"];
-			delete node["coordPos3D"];
-			delete node["coord2D"];
-			if (node["attachedMarkers"]){
-				for (const markers of node["attachedMarkers"]){
-					delete markers["coordPos2D"];
-					delete markers["coordPos3D"];
-					delete markers["isAttachedToParent"];
-					delete markers["coord2D"];
-					delete markers["parity"];
+		if (json.hasOwnProperty("ctab")){
+			for (const node of json["ctab"]["nodes"]){
+				delete node["coordPos2D"];
+				delete node["coordPos3D"];
+				delete node["coord2D"];
+				if (node["attachedMarkers"]){
+					for (const markers of node["attachedMarkers"]){
+						delete markers["coordPos2D"];
+						delete markers["coordPos3D"];
+						delete markers["isAttachedToParent"];
+						delete markers["coord2D"];
+						delete markers["parity"];
+					}
 				}
+			}
+			for (const connector of json["ctab"]["connectors"]){
+				delete connector["coordPos2D"];
+				delete connector["coordPos3D"];
+				delete connector["coord2D"];
+				delete connector["parity"];
+				delete connector["isInAromaticRing"];
 			}
 		}
 		delete json["anchorNodes"];
-		for (const connector of json["ctab"]["connectors"]){
-			delete connector["coordPos2D"];
-			delete connector["coordPos3D"];
-			delete connector["coord2D"];
-			delete connector["parity"];
-			delete connector["isInAromaticRing"];
-		}
+		
 
 		output.simpleKekule = JSON.stringify(json);
 		// console.log(LZ77);
