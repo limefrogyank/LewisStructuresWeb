@@ -37,13 +37,14 @@ declare global {
 		OpenBabelModule(): OpenBabelModule;
 	}
 }
-//(window as any).kek = Kekule;
-if (import.meta.env.MODE === 'development') {
-	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:5173/src/openbabel.js');
-} else {
-	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:3000/openbabel.js');
-}
-//obm2;
+// if (import.meta.env.MODE === 'development') {
+// 	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:5173/src/openbabel.js');
+// } else {
+// 	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:3000/openbabel.js');
+// }
+
+Kekule.environment.setEnvVar('openbabel.scriptSrc', 'https://cdn.jsdelivr.net/gh/limefrogyank/LewisStructuresWeb@latest/dist/openbabel.js');
+
 
 Kekule.OpenBabel.enable(()=> console.log("OpenBabelModule Loaded!"));
 //Kekule.OpenBabel.setModule(OpenBabelModule);
