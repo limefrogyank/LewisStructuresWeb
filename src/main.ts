@@ -10,8 +10,8 @@ import { BondType, InteractionMode, SettingsService } from './service/settingsSe
 import { Button } from '@microsoft/fast-foundation';
 
 
-const foobarRequire = m => eval('require')(m); // trick webpack
-foobarRequire;
+// const foobarRequire = m => eval('require')(m); // trick webpack
+// foobarRequire;
 
 DesignSystemProvider;
 Button;

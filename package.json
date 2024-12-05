@@ -10,6 +10,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "vite build",
@@ -32,7 +33,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.4.0",
     "tsyringe": "^4.7.0",
-    "vite": "^5.4.11"
+    "unenv": "^1.10.0"
   },
   "devDependencies": {
     "bootstrap-icons": "^1.10.3",
@@ -42,6 +43,8 @@
     "terser-webpack-plugin": "^5.3.3",
     "ts-loader": "^9.3.1",
     "typescript": "^4.7.4",
+    "vite": "^6.0.2",
+    "vite-plugin-node-polyfills": "^0.22.0",
     "webpack-dev-server": "^4.9.3"
   }
 }
