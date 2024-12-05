@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { env, nodeless } from 'unenv'
 const { alias } = env(nodeless)
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 // remove buffer to fix the issue "could not resolve "./_buffer"
 const { buffer: _, ...rest } = alias
@@ -9,7 +9,14 @@ const { buffer: _, ...rest } = alias
 export default defineConfig({
     base: './',
     plugins: [
-       
+        viteStaticCopy({
+            targets: [
+                {
+                    src: ["./src/openbabel.js", "./src/openbabel.wasm", "./src/openbabel.data"],
+                    dest: '.'
+                }
+            ]
+        })
       ],
     resolve:{
         alias:{
