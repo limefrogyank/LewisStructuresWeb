@@ -55,6 +55,7 @@ function waitForModule(resolve:()=>void){
 	setTimeout(()=>{
 		
 		if (window.OpenBabelModule !== undefined){
+			resolve();
 			return;
 		} else {
 			console.log("OpenBabelModule not loaded yet")
