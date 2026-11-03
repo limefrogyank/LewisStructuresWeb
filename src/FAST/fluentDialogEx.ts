@@ -1,29 +1,26 @@
-import { FASTElement, customElement, attr, html, ref, css, when, ElementStyles } from '@microsoft/fast-element';
-import { dialogTemplate as template } from '@microsoft/fast-foundation';
-import { Dialog, DialogStyles as styles } from '@fluentui/web-components';
+import {FASTElement, customElement, attr, html, ref, css,when, ElementStyles} from '@microsoft/fast-element';
+import { dialogTemplate as template  } from '@microsoft/fast-foundation';
+import { Dialog, dialogStyles as styles } from '@fluentui/web-components';
 
 
 
 Dialog;
 
-
-@customElement({
-  name: 'fluent-dialog-ex',
-  template: html`
-        <fluent-dialog>
-            <slot></slot>
-        </fluent-dialog>
-    `,
-  styles: `
-  fluent-dialog {
+const style = css`
+  .hidden {
     display: none;
   }
-  fluent-dialog{
+  .control{
 	  overflow-x:scroll;
-  }  
-`
-})
-export class FluentDialogEx extends FASTElement {
+  }
+  
+`;
+
+@customElement({
+	name: 'fluent-dialog-ex',
+ })
+export class FluentDialogEx extends Dialog {
 
 
 }
+  

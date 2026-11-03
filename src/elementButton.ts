@@ -1,33 +1,46 @@
-import { ButtonStyles as oldstyles, Button} from '@fluentui/web-components';
+import { provideFluentDesignSystem, buttonStyles as oldstyles, Button} from '@fluentui/web-components';
 import {  buttonTemplate as template, ButtonOptions, ElementDefinitionContext} from '@microsoft/fast-foundation';
-import {FASTElement, customElement, html, css, ref} from '@microsoft/fast-element';
+import { attr, customElement, css, cssPartial ,html, FASTElement} from '@microsoft/fast-element';
 
 
-@customElement({
-    name: 'element-button',
-    template: html<ChemicalElementButton>`
-        <fluent-button ${ref("internalButton")}>
-            <slot></slot>
-        </fluent-button>
-    `,
-    styles: `
-        fluent-button {
-            min-width: 30px;
-            width:30px;
-            height: 30px;
-            min-height:30px;
-        }
 
-        fluent-button::part(control) {
-            padding: 0;
-        }
-    `
-})
-export class ChemicalElementButton extends FASTElement {
-  internalButton!: Button;
-  focus(){
-    this.internalButton.focus();
+
+const styles2 = (context, definition) => css`
+	${oldstyles(context,definition)}
+
+  :host {
+    min-width:30px;
+    height:30px;
   }
+  
+	:host .control {
+		padding:0px;
+    
+	}
+
+`;
+
+
+export class ChemicalElementButton extends Button {
+ 
+  public connectedCallback(): void {
+    super.connectedCallback();
+  }
+
 }
 
+
+export const chemicalElementButton = ChemicalElementButton.compose({
+  baseName: 'element-button',
+  
+  baseClass: Button,
+  template,
+  styles: styles2,
+  shadowOptions:{
+    delegatesFocus:true
+  }
+});
+
+
+export const chemicalElementButtonStyles = styles2;
 

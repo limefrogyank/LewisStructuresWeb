@@ -10,6 +10,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "vite build",
@@ -19,21 +20,20 @@
   "license": "ISC",
   "dependencies": {
     "@abraham/reflection": "^0.12.0",
-    "@fluentui/web-components": "^3.1.3",
+    "@fluentui/web-components": "^2.5.3",
     "@microsoft/fast-components": "^2.30.6",
-    "@microsoft/fast-element": "^3.1.2",
+    "@microsoft/fast-element": "^1.10.4",
     "@svgdotjs/svg.draggable.js": "^3.0.2",
     "@svgdotjs/svg.filter.js": "^3.0.8",
     "@svgdotjs/svg.js": "^3.1.2",
     "buffer": "^6.0.3",
-    "gridjs": "^6.2.0",
     "kekule": "^1.0.0",
     "lz77": "^1.1.0",
     "pako": "^2.1.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.4.0",
     "tsyringe": "^4.7.0",
-    "vite": "^8.3.5"
+    "unenv": "^1.10.0"
   },
   "devDependencies": {
     "bootstrap-icons": "^1.10.3",
@@ -42,7 +42,9 @@
     "style-loader": "^3.3.1",
     "terser-webpack-plugin": "^5.3.3",
     "ts-loader": "^9.3.1",
-    "typescript": "^7.0.2",
+    "typescript": "^4.7.4",
+    "vite": "^6.0.2",
+    "vite-plugin-static-copy": "^2.2.0",
     "webpack-dev-server": "^4.9.3"
   }
 }

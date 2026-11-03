@@ -2,8 +2,8 @@
 	"compilerOptions": {
 	  "pretty": true,
 	  "target": "ES6",
-	  "module": "nodenext",
-	  "moduleResolution": "nodenext",
+	  "module": "ES6",
+	  "moduleResolution": "Node",
 	  "importHelpers": false,
 	  "experimentalDecorators": true,
 	  "emitDecoratorMetadata": true,
