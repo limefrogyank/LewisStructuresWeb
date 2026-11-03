@@ -10,14 +10,13 @@ import '@fluentui/web-components/dialog.js';
 import '@fluentui/web-components/menu.js';
 import '@fluentui/web-components/menu-item.js';
 import {webLightTheme} from '@fluentui/tokens';
-import * as obm from './kekule/dist/extra/openbabel.js';
+import './openBabelFactory';
 import { Button, TextInput, ButtonAppearance } from '@fluentui/web-components';
 import { obMolToCAN, obMolToInChI, obMolToKekule } from './openBabelStuff';
 import { addLonePairsAndRedraw, transformLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
-import './openbabel.js'
 import { Connector } from './connector';
 import { BlindOutput, ComparisonOutput, ComparisonResult, CompressedWebworkOutput, IBlindOutput, IComparisonOutput, IComparisonResult, ICompressedWebworkOutput, Position } from './interfaces';
 import { LonePair } from './lonePair';
@@ -309,11 +308,6 @@ ${x => x.debugString}
 
 //export var settingsService : SettingsService;
 //settingsService.test = "setting new text";
-
-
-obm;
-(window as any).OpenBabelModule = obm;
-
 
 
 // hack to make this work!

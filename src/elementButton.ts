@@ -1,6 +1,6 @@
 import { ButtonStyles as oldstyles, Button} from '@fluentui/web-components';
 import {  buttonTemplate as template, ButtonOptions, ElementDefinitionContext} from '@microsoft/fast-foundation';
-import {FASTElement, customElement, html, css, ref} from '@microsoft/fast-element';
+import {FASTElement, customElement, html, css, ref, attr} from '@microsoft/fast-element';
 
 
 @customElement({
@@ -25,6 +25,19 @@ import {FASTElement, customElement, html, css, ref} from '@microsoft/fast-elemen
 })
 export class ChemicalElementButton extends FASTElement {
   internalButton!: Button;
+
+  connectedCallback() {
+    super.connectedCallback();
+
+    const label = this.getAttribute("aria-label");
+
+    if (label) {
+        this.shadowRoot
+            ?.querySelector("fluent-button")
+            ?.setAttribute("aria-label", label);
+    }
+}
+
   focus(){
     this.internalButton.focus();
   }

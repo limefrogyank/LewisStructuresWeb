@@ -61,7 +61,7 @@ const styles = css`
 })
 export class PeriodicTableModal extends FASTElement {
 	@attr({ mode: 'boolean' }) visible: boolean = false;
-	@attr({ mode: 'boolean' }) hideTransitionMetals: boolean = false;
+	@attr({ mode: 'boolean' }) hideTransitionMetals: boolean = true;
 
 	cancelButton!: HTMLButtonElement;
 
@@ -139,7 +139,8 @@ export class PeriodicTableModal extends FASTElement {
 
 						return h('element-button', {
 							onClick: clickElementHandler,
-							'data-symbol': cell.symbol
+							'data-symbol': cell.symbol,
+							'aria-label': cell.name,
 						}, cell.symbol);
 					} catch (e) {
 						return "test";

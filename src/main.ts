@@ -1,10 +1,4 @@
 import 'reflect-metadata';
-import { 
-	provideFASTDesignSystem, 
-	fastCard, 
-	fastButton,
-	DesignSystemProvider
-  } from '@microsoft/fast-components';
 import { LewisStructureCanvas } from './lewisStructureCanvas';
 import { BondType, InteractionMode, SettingsService } from './service/settingsService';
 import { Button } from '@microsoft/fast-foundation';
@@ -13,7 +7,6 @@ import { Button } from '@microsoft/fast-foundation';
 //const foobarRequire = m => eval('require')(m); // trick webpack
 //foobarRequire;
 
-DesignSystemProvider;
 Button;
 LewisStructureCanvas;
 
