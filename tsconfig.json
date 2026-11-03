@@ -14,7 +14,7 @@
 	  "strict": true,
 	  "noImplicitAny": false,
 	  "strictPropertyInitialization": false,
-	  
+	  "types":["vite/client"],
 	  "outDir": "dist/build",
 	  "rootDir": "src",
 	  "lib": [

@@ -2,15 +2,24 @@
 
 This is a web element that is designed for homework/quiz purposes.  A student will be able to draw a Lewis Structure.  The web element can then return a Canonical SMILES representation of the structure (if it exists) along with information about perspective.  
 
+Currently, this is being used in WeBWorK along with accompanying contextChemical.pl and parserLewisStructureTool.pl to grade student's drawings.  See https://github.com/WeBWorK-for-Chemistry/WeBWorKChemistry for more information.
+
+## Demo ##
+https://limefrogyank.github.io/LewisStructuresWeb/
+
 ## Usage ##
-HTML:
+### HTML:
 ```
 <h5>
 Question:  Draw the Lewis Structure for ammonia, NH₃.   
 </h5>
 <lewis-structure-canvas smiles="N"></lewis-structure-canvas>
 ```
-Javascript:
+
+Leave the smiles parameter blank to have a student draw their own.  With the smiles parameter filled, it will attempt to create a Lewis Structure using a combination of OpenBabel and KekuleJS.  
+
+
+### Javascript:
 (after student has drawn a structure)
 ```
 const lewisStructureCanvas = document.getElementsByTagName("lewis-structure-canvas")[0];
