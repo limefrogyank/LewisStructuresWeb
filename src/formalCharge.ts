@@ -76,8 +76,8 @@ export class FormalCharge implements IDisposable {
             .stroke('#000000')
             .fill('#ffffff')
             .attr({ 'stroke-width': 0.5 });
-        this._text = this._group.text(this.numberToCharge(options.charge.value))
-            .font({ size: 9, family: 'sans-serif' })
+        this._text = this._group.text(this.numberToCharge(options.charge.value.charge))
+            .font({ size: 14, family: 'sans-serif' })
             .x(0)
             .cy(FormalCharge.chargeDistance)
             //.stroke('#000000')

@@ -10,14 +10,15 @@ import '@fluentui/web-components/dialog.js';
 import '@fluentui/web-components/menu.js';
 import '@fluentui/web-components/menu-item.js';
 import {webLightTheme} from '@fluentui/tokens';
-import * as obm from './kekule/dist/extra/openbabel.js';
+import './openBabelFactory';
 import { Button, TextInput, ButtonAppearance } from '@fluentui/web-components';
 import { obMolToCAN, obMolToInChI, obMolToKekule } from './openBabelStuff';
 import { addLonePairsAndRedraw, transformLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
-import './openbabel.js'
+//console.log(OpenBabelModule);
+//window.OpenBabelModule = OpenBabelModule;
 import { Connector } from './connector';
 import { BlindOutput, ComparisonOutput, ComparisonResult, CompressedWebworkOutput, IBlindOutput, IComparisonOutput, IComparisonResult, ICompressedWebworkOutput, Position } from './interfaces';
 import { LonePair } from './lonePair';
@@ -311,11 +312,6 @@ ${x => x.debugString}
 //settingsService.test = "setting new text";
 
 
-obm;
-(window as any).OpenBabelModule = obm;
-
-
-
 // hack to make this work!
 //let s = window.setInterval(()=>{
 //console.log(window.OpenBabelModule);
@@ -349,7 +345,7 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr({ mode: 'boolean', attribute: 'show-formal-charges'}) useFormalCharge: boolean = false;
 	@attr({ mode: 'boolean', attribute: 'flat'}) noPerspective: boolean = false;
 
-	debug: boolean = false;
+	debug: boolean = true;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;

@@ -2,6 +2,16 @@
 
 This is a web element that is designed for homework/quiz purposes.  A student will be able to draw a Lewis Structure.  The web element can then return a Canonical SMILES representation of the structure (if it exists) along with information about perspective.  
 
+## Standalone JavaScript
+Run `npm run build:library`, then copy `dist-library/lewis-structure-canvas.js`, `dist-library/openbabel.wasm`, and `dist-library/openbabel.data` into the same directory in your project. Reference only the JavaScript file:
+
+```html
+<script src="./lewis-structure-canvas.js"></script>
+<lewis-structure-canvas smiles="N"></lewis-structure-canvas>
+```
+
+The JavaScript bundle registers the custom element and loads the Open Babel binaries from beside itself.
+
 Currently, this is being used in WeBWorK along with accompanying contextChemical.pl and parserLewisStructureTool.pl to grade student's drawings.  See https://github.com/WeBWorK-for-Chemistry/WeBWorKChemistry for more information.
 
 ## Demo ##

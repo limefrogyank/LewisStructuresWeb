@@ -20,10 +20,13 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
         let terminalAtoms = linked.filter(x=> !centerAtoms.includes(x));
         //console.log('getMarkersOfType error?');
         let lonepairs = centerAtoms[i].getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet,false);
+        let lonepairs2 = centerAtoms[i].getMarkersOfType(Kekule.ChemMarker.BaseMarker,false);
+        let lonepairCount = lonepairs.length;
         let length = getAverageBondLength(centerAtom,linked);
         
+        
         //tetrahedral
-        if (linked.length == 4 && markerCount == 0) {            
+        if (linked.length == 4 && lonepairCount == 0) {            
             if (centerAtoms.length == 1) {
                 
                 //redraw them all.
@@ -87,7 +90,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
 
 
             }
-        }else if (linked.length == 3 && markerCount == 1){
+        }else if (linked.length == 3 && lonepairCount == 1){
             //trigonal pyramid
             if (centerAtoms.length == 1) {
                 let vectors = generateTerminalTetrahedralVectors(0,useFlat, true);
@@ -146,7 +149,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                 }
             }
            
-        }else if (linked.length == 2 && markerCount == 2) {
+        }else if (linked.length == 2 && lonepairCount == 2) {
             //bent
             if (centerAtoms.length == 1){
                 let vectors = generateTerminalTetrahedralVectors(0, useFlat, true);
@@ -165,7 +168,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                 }
 
             }
-        } else if (linked.length == 1 && markerCount == 3){
+        } else if (linked.length == 1 && lonepairCount == 3){
             //linear
             let vectors = generateTerminalTetrahedralVectors(0, useFlat, true);
             linked[0].coord2D = {x: centerAtom.coord2D.x + vectors[0].x * length, y:-vectors[0].y* length + centerAtom.coord2D.y};
@@ -174,7 +177,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
             lonepairs[1].coord2D = {x: vectors[2].x, y:-vectors[2].y};
             lonepairs[2].coord2D = {x: vectors[3].x, y:-vectors[3].y};
             
-        } else if (linked.length == 3 && markerCount == 0){
+        } else if (linked.length == 3 && lonepairCount == 0){
             //trigonal planar
             // do nothing
             // let vectors = getTrigonalPlanarVectors();
@@ -186,7 +189,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
             //     lonePairs[j].coord2D = {x: vectors[linked.length + j].x, y:-vectors[linked.length + j].y};
             // }
 
-        } else if (linked.length == 2 && markerCount == 1){
+        } else if (linked.length == 2 && lonepairCount == 1){
             // bent from trigonal planar.  as a shortcut, use tetrahedral angles
             if (centerAtoms.length == 1){
                 let vectors = generateTerminalTetrahedralVectors(0, useFlat, true);
@@ -202,7 +205,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                     
                 }
             }
-        }  else if (linked.length == 5 && markerCount == 0){ 
+        }  else if (linked.length == 5 && lonepairCount == 0){ 
             // trigonal bipyramidal
             if (useFlat){
                 // do nothing
@@ -226,7 +229,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                 }
             }
 
-        } else if (linked.length == 4 && markerCount == 1){
+        } else if (linked.length == 4 && lonepairCount == 1){
             // see-saw
             if (useFlat){
                 // do nothing
@@ -250,7 +253,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                     intersection[0].stereo =Kekule.BondStereo.DOWN;
                 }
             }
-        } else if (linked.length == 3 && markerCount == 2){
+        } else if (linked.length == 3 && lonepairCount == 2){
             // T-shape
             if (useFlat){
                 // do nothing
@@ -265,7 +268,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
 
                 
             }
-        } else if (linked.length == 2 && markerCount == 3){
+        } else if (linked.length == 2 && lonepairCount == 3){
             // linear
             if (useFlat){
                 // do nothing
@@ -278,7 +281,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                 lonepairs[0].coord2D = shiftAndScale(centerAtom, vectors[3], length);
                 lonepairs[1].coord2D = shiftAndScale(centerAtom, vectors[4], length);
             }
-        } else if (linked.length == 6 && markerCount == 0){ 
+        } else if (linked.length == 6 && lonepairCount == 0){ 
             // octahedral
             if (useFlat){
                 // do nothing
@@ -312,7 +315,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                     intersection[0].stereo =Kekule.BondStereo.UP;
                 }
             }
-        } else if (linked.length == 5 && markerCount == 1){ 
+        } else if (linked.length == 5 && lonepairCount == 1){ 
             // square pyramidal
             if (useFlat){
                 // do nothing
@@ -347,7 +350,7 @@ function adjustBondAngles(molecule:Kekule.Molecule, centerAtoms: Kekule.Atom[] ,
                     intersection[0].stereo =Kekule.BondStereo.UP;
                 }
             }
-        } else if (linked.length == 4 && markerCount == 2){ 
+        } else if (linked.length == 4 && lonepairCount == 2){ 
             // square planar
             if (useFlat){
                 // do nothing
@@ -409,7 +412,7 @@ export function transformLonePairsAndRedraw(molecule:Kekule.Molecule, options:{u
         //add formal charge where needed
         if (showFormalCharges && atom.charge != 0){
             let formalCharge = new Kekule.ChemMarker.Charge();
-            formalCharge.value = atom.charge;
+            formalCharge.info = atom.charge.toString(); 
             atom.appendMarker(formalCharge);
         }
     }
