@@ -3,20 +3,25 @@ import { FASTElement, customElement, attr, html, ref, observable, Observable, wh
 import { PeriodicTableModal } from './periodicTableModal';
 import { Vertex } from './vertex';
 import { InteractionMode, SettingsService, BondType } from './service/settingsService';
-import { provideFluentDesignSystem, fluentButton, fluentTextField, fluentDialog, fluentMenu, fluentMenuItem } from '@fluentui/web-components';
-//import * as obm from './kekule/dist/extra/openbabel.js';
-//import * as obm2 from './openbabel.js';
-import { Kekule } from 'kekule';
-import { Button, TextField } from '@fluentui/web-components';
+import { setTheme } from '@fluentui/web-components';
+import '@fluentui/web-components/button.js';
+import '@fluentui/web-components/text-input.js';
+import '@fluentui/web-components/dialog.js';
+import '@fluentui/web-components/menu.js';
+import '@fluentui/web-components/menu-item.js';
+import {webLightTheme} from '@fluentui/tokens';
+import * as obm from './kekule/dist/extra/openbabel.js';
+import { Button, TextInput, ButtonAppearance } from '@fluentui/web-components';
 import { obMolToCAN, obMolToInChI, obMolToKekule } from './openBabelStuff';
 import { addLonePairsAndRedraw, transformLonePairsAndRedraw } from './redrawing';
 import { SVG, extend as SVGextend, Element as SVGElement, Svg } from '@svgdotjs/svg.js'
 import '@svgdotjs/svg.draggable.js'
 import '@svgdotjs/svg.filter.js'
-//import './openbabel.js'
+import './openbabel.js'
 import { Connector } from './connector';
 import { BlindOutput, ComparisonOutput, ComparisonResult, CompressedWebworkOutput, IBlindOutput, IComparisonOutput, IComparisonResult, ICompressedWebworkOutput, Position } from './interfaces';
 import { LonePair } from './lonePair';
+import { Kekule as k } from 'kekule';
 import { mimeTests, samples } from './tests';
 import { negativeCircleSvg, positiveCircleSvg } from './svgs';
 import { getValence } from './valence';
@@ -26,46 +31,15 @@ import { container } from "tsyringe";
 //import * as zlib from "zlib";
 import {Buffer} from "buffer";
 import * as pako from "pako/dist/pako.js";
-
-
-Kekule;
-//k; //loads kekule stuff, prevents tree-shaking.
-
+import * as LZ77 from "lz77";
+k; //loads kekule stuff, prevents tree-shaking.
+//console.log(pako);
 declare global {
 	interface Window {
 		//Kekule: Kekule;
 		OpenBabelModule(): OpenBabelModule;
 	}
 }
-// if (import.meta.env.MODE === 'development') {
-// 	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:5173/src/openbabel.js');
-// } else {
-// 	Kekule.environment.setEnvVar('openbabel.scriptSrc', 'http://localhost:3000/openbabel.js');
-// }
-
-Kekule.environment.setEnvVar('openbabel.scriptSrc', 'https://cdn.jsdelivr.net/gh/limefrogyank/LewisStructuresWeb@latest/dist/openbabel.js');
-
-
-Kekule.OpenBabel.enable(()=> console.log("OpenBabelModule Loaded!"));
-//Kekule.OpenBabel.setModule(OpenBabelModule);
-const loadModule = new Promise<void>((resolve,reject)=>{
-	waitForModule(resolve);
-});
-function waitForModule(resolve:()=>void){
-	setTimeout(()=>{
-		
-		if (window.OpenBabelModule !== undefined){
-			resolve();
-			return;
-		} else {
-			console.log("OpenBabelModule not loaded yet")
-			waitForModule(resolve);
-		}
-	}, 100);
-}
-
-//(window as any).ob = Kekule.OpenBabel;
-//(window as any).obm2 = window.OpenBabelModule();
 export interface OpenBabelModule {
 	//new():OpenBabelModule;
 	OBMol: OpenBabelModule.OBMol;
@@ -140,12 +114,14 @@ export namespace OpenBabelModule {
 
 PeriodicTableModal;
 
-provideFluentDesignSystem()
-	.register(fluentButton())
-	.register(fluentTextField())
-	.register(fluentDialog())
-	.register(fluentMenu())
-	.register(fluentMenuItem());
+setTheme(webLightTheme);
+
+// provideFluentDesignSystem()
+// 	.register(fluentButton())
+// 	.register(fluentTextField())
+// 	.register(fluentDialog())
+// 	.register(fluentMenu())
+// 	.register(fluentMenuItem());
 
 
 //raph;
@@ -153,8 +129,14 @@ provideFluentDesignSystem()
 
 const template = html<LewisStructureCanvas>`  
  
-<fluent-design-system-provider use-defaults>
+
 <style>
+.electronButton{
+	min-width:auto;
+}
+.electronButton svg{
+	pointer-events:none;
+}
 .eventless{
 	pointer-events:none;
 }
@@ -169,30 +151,30 @@ ${when(x => !x.readonly, html<LewisStructureCanvas>`
 	<div role="toolbar" ${ref("toolbarDiv")} style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 
 		<div style="display:flex;margin-right:5px;">
-			<fluent-button appearance="accent" id='draw' class="toolButton">Draw</fluent-button>
-			<fluent-button appearance="outline" id='move' class="toolButton">Move</fluent-button>
-			<fluent-button appearance="outline" id='erase' class="toolButton">Erase</fluent-button>
+			<fluent-button appearance="${x=> ButtonAppearance.primary}" id='draw' class="toolButton">Draw</fluent-button>
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='move' class="toolButton">Move</fluent-button>
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='erase' class="toolButton">Erase</fluent-button>
 		</div>
 
 		<div style="display:flex;margin-right:5px;" class="btn-group me-2" role="group" >
-			<fluent-button apearance="outline" class="elementButton" ${ref("periodicTableButton")} 
-				@click="${(x, c) => { x.visibleElementSelector = !x.visibleElementSelector; }}"
+			<fluent-button apearance="${x=> ButtonAppearance.outline}" class="elementButton" ${ref("periodicTableButton")} 
+				@click="${(x, c) => {  x.periodicTableModal.show(); }}"
 				aria-label="Element Selector">
 				Element Select
 			</fluent-button>
-			<fluent-text-field ${ref("elementTextField")} size="1" class="elementButton" readonly value="${x => x.settingsService.currentElement}"></fluent-text-field>
+			<fluent-text-input ${ref("elementTextField")} size="1" class="elementButton" readonly value="${x => x.settingsService.currentElement}"></fluent-text-field>
 		</div>
 
 		<div style="display:flex;margin-right:5px;" class="btn-group me-2" role="group" aria-label="Electrons button group">
 
-			<fluent-button appearance="accent" id='single' class="electronButton" aria-label="Single Bond">
+			<fluent-button appearance="${x=> ButtonAppearance.primary}" id='single' class="electronButton" aria-label="Single Bond">
 				<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 					<path
 						d="M 0.17263349,14.53574 14.604793,0.1035801 15.968598,1.4673847 1.5019114,15.934071 Z"
 					/>
 				</svg>
 			</fluent-button>
-			<fluent-button appearance="outline" id='double' class="electronButton" aria-label="Double bond">
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='double' class="electronButton" aria-label="Double bond">
 				<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 					<path
 						d="M 0.11187782,11.695577 11.678321,0.09460633 13.042126,1.4584109 1.4411558,13.093908 Z"
@@ -202,7 +184,7 @@ ${when(x => !x.readonly, html<LewisStructureCanvas>`
 					/>
 				</svg>
 			</fluent-button>
-			<fluent-button appearance="outline" id='triple' class="electronButton" aria-label="Triple bond">
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='triple' class="electronButton" aria-label="Triple bond">
 				<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 					<path
 						d="M 0.11187782,10.418089 10.400833,0.09460636 11.764638,1.4584109 1.4411558,11.81642 Z"
@@ -215,7 +197,7 @@ ${when(x => !x.readonly, html<LewisStructureCanvas>`
 					/>
 				</svg>
 			</fluent-button>
-			<fluent-button appearance="outline" id='dashed' class="electronButton" aria-label="Dashed wedge bond">
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='dashed' class="electronButton" aria-label="Dashed wedge bond">
 				<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 					<path
 						d="m 0.1009346,15.919433 2.0063376,-2.93919 0.9546284,0.952815 z" />
@@ -229,14 +211,14 @@ ${when(x => !x.readonly, html<LewisStructureCanvas>`
 						d="M 9.943689,1.3810679 14.553003,5.9903821 15.899544,5.092688 10.806856,2.3870958e-7 Z"/>
 				</svg>
 			</fluent-button>
-			<fluent-button appearance="outline" id='solid' class="electronButton" aria-label="Solid wedge bond">
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='solid' class="electronButton" aria-label="Solid wedge bond">
 				<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 					<path
 					d="M 0.10358009,15.916808 10.841383,0.0345267 15.899544,5.092688 Z"
 					/>
 				</svg>
 			</fluent-button>
-			<fluent-button appearance="outline" id='lonePair' class="electronButton" aira-label="Lone pair electrons">
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='lonePair' class="electronButton" aria-label="Lone pair electrons">
 				<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 					<circle
 						r="2.3132887"
@@ -251,10 +233,10 @@ ${when(x => !x.readonly, html<LewisStructureCanvas>`
 						r="2.3132887" />
 				</svg>
 			</fluent-button>
-			<fluent-button appearance="outline" id='positive' class="electronButton" aria-label="Positive Formal Charge"
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='positive' class="electronButton" aria-label="Positive Formal Charge"
 				:innerHTML="${x => positiveCircleSvg}">		
 			</fluent-button>
-			<fluent-button appearance="outline" id='negative' class="electronButton" aria-label="Negative Formal Charge" 
+			<fluent-button appearance="${x=> ButtonAppearance.outline}" id='negative' class="electronButton" aria-label="Negative Formal Charge" 
 				:innerHTML="${x => negativeCircleSvg}">				
 			</fluent-button>
 		</div>
@@ -273,14 +255,16 @@ ${when(x => !x.readonly, html<LewisStructureCanvas>`
 	</div>
 	
 	<periodic-table-modal 
+			${ref("periodicTableModal")}
 		@change="${(x, c) => {
 		x.settingsService.setElement((c.event as CustomEvent).detail);
 		x.dismissPeriodicTable();
 	}}"
-		visible="${x => x.visibleElementSelector}" 
+		
 		@dismiss="${x => x.dismissPeriodicTable()}"
 	>
 	</periodic-table-modal>
+
 ${when(x => x.debug, html<LewisStructureCanvas>`
 	<div role="toolbar" style="display:flex;flex-wrap:wrap;" aria-label="Toolbar with button groups">
 		<div style="display:flex;margin-right:5px;">
@@ -298,7 +282,6 @@ ${when(x => x.debug, html<LewisStructureCanvas>`
 ${x => x.debugString}
 </textarea>
 `)}
-</fluent-design-system-provider>
 `;
 
 // const unusedPiece = html<LewisStructureCanvas>`
@@ -328,8 +311,8 @@ ${x => x.debugString}
 //settingsService.test = "setting new text";
 
 
-//obm;
-//(window as any).OpenBabelModule = obm;
+obm;
+(window as any).OpenBabelModule = obm;
 
 
 
@@ -356,7 +339,6 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr height: number = 400;
 	@attr width: number = 400;
 
-	@attr visibleElementSelector: boolean = false;
 
 	@observable debugString: string = "";
 	@attr smiles: string;  // DEPRECATED - NOT USED ANYMORE
@@ -374,7 +356,7 @@ export class LewisStructureCanvas extends FASTElement {
 	//mainCanvas: HTMLCanvasElement;
 	svgContainer: HTMLDivElement;
 	settingsService: SettingsService = new SettingsService();
-	elementTextField: TextField;
+	elementTextField: TextInput;
 	keyboardDiv: HTMLDivElement;
 
 	menuButton: HTMLButtonElement;
@@ -391,7 +373,8 @@ export class LewisStructureCanvas extends FASTElement {
 	public dismissPeriodicTable() {
 		let s = SVG();
 
-		this.visibleElementSelector = false;
+		this.periodicTableModal?.hide();
+		//this.visibleElementSelector = false;
 		this.periodicTableButton.focus();
 	}
 
@@ -551,31 +534,28 @@ export class LewisStructureCanvas extends FASTElement {
 		delete json["coordPos3D"];
 		delete json["renderOptions"];
 		delete json["parity"];
-		if (json.hasOwnProperty("ctab")){
-			for (const node of json["ctab"]["nodes"]){
-				delete node["coordPos2D"];
-				delete node["coordPos3D"];
-				delete node["coord2D"];
-				if (node["attachedMarkers"]){
-					for (const markers of node["attachedMarkers"]){
-						delete markers["coordPos2D"];
-						delete markers["coordPos3D"];
-						delete markers["isAttachedToParent"];
-						delete markers["coord2D"];
-						delete markers["parity"];
-					}
+		for (const node of json["ctab"]["nodes"]){
+			delete node["coordPos2D"];
+			delete node["coordPos3D"];
+			delete node["coord2D"];
+			if (node["attachedMarkers"]){
+				for (const markers of node["attachedMarkers"]){
+					delete markers["coordPos2D"];
+					delete markers["coordPos3D"];
+					delete markers["isAttachedToParent"];
+					delete markers["coord2D"];
+					delete markers["parity"];
 				}
-			}
-			for (const connector of json["ctab"]["connectors"]){
-				delete connector["coordPos2D"];
-				delete connector["coordPos3D"];
-				delete connector["coord2D"];
-				delete connector["parity"];
-				delete connector["isInAromaticRing"];
 			}
 		}
 		delete json["anchorNodes"];
-		
+		for (const connector of json["ctab"]["connectors"]){
+			delete connector["coordPos2D"];
+			delete connector["coordPos3D"];
+			delete connector["coord2D"];
+			delete connector["parity"];
+			delete connector["isInAromaticRing"];
+		}
 
 		output.simpleKekule = JSON.stringify(json);
 		// console.log(LZ77);
@@ -1394,19 +1374,12 @@ export class LewisStructureCanvas extends FASTElement {
 		this.mainSVG.width(this.width);
 	}
 
-	visibleElementSelectorChanged(oldValue: boolean, newValue: boolean) {
-		//console.log('CHANGED: ' + newValue);
-	}
 
-	async connectedCallback() {
+	connectedCallback() {
 		super.connectedCallback();
-		
 		this.mainSVG = SVG();
 		this.mainSVG.addTo(this.svgContainer);
 		this.mainSVG.size(this.width, this.height);
-
-
-
 		this.mainSVG.on('change', (e: any) => {
 			this.$emit('change', e);
 		});
@@ -1447,14 +1420,15 @@ export class LewisStructureCanvas extends FASTElement {
 
 		if (this.shadowRoot != null) {
 			let modeButtons = this.shadowRoot.querySelectorAll<Button>(".toolButton");
+			//modeButtons[0].appearance = ButtonAppearance.primary; // default to draw mode
 			for (let i = 0; i < modeButtons.length; i++) {
 				let input = (modeButtons.item(i) as Button);
 				if (input) {
 					input.onclick = (ev) => {
 						let target = ev.target as Button;
-						if (target.appearance != 'accent') {
+						if (target.appearance !== ButtonAppearance.primary) {
 							this.resetButtons(modeButtons);
-							target.appearance = 'accent';
+							target.appearance = ButtonAppearance.primary;
 							let option = target.id;
 							switch (option) {
 								case 'draw':
@@ -1475,7 +1449,7 @@ export class LewisStructureCanvas extends FASTElement {
 			}
 
 
-			let elementButtons = this.shadowRoot.querySelectorAll(".elementButton");
+			let elementButtons = this.shadowRoot.querySelectorAll<Button>(".elementButton");
 			// for (let i=0; i< elementButtons.length; i++){
 			// 	let input = (elementButtons.item(i) as HTMLInputElement);
 			// 	if (input){
@@ -1492,23 +1466,24 @@ export class LewisStructureCanvas extends FASTElement {
 			}
 
 			let electronButtons = this.shadowRoot.querySelectorAll<Button>(".electronButton");
+			//electronButtons[0].appearance = ButtonAppearance.primary; // default to draw mode
 			for (let i = 0; i < electronButtons.length; i++) {
 				let input = (electronButtons.item(i) as Button);
 				if (input) {
 					input.onclick = (ev) => {
 						let target = ev.target as Button;
-						if (target.appearance != 'accent') {
+						if (target.appearance !== ButtonAppearance.primary) {
 							this.resetButtons(electronButtons);
-							target.appearance = 'accent';
+							target.appearance = ButtonAppearance.primary;
 							this.settingsService.currentBondType = BondType[target.id];
-							if (BondType[target.value] == BondType.lonePair) {
+							if (BondType[target.id] == BondType.lonePair) {
 								for (let i = 0; i < elementButtons.length; i++) {
-									let input = (elementButtons.item(i) as HTMLInputElement);
+									let input = (elementButtons.item(i));
 									input.disabled = true;
 								}
 							} else {
 								for (let i = 0; i < elementButtons.length; i++) {
-									let input = (elementButtons.item(i) as HTMLInputElement);
+									let input = (elementButtons.item(i));
 									input.disabled = false;
 								}
 							}
@@ -1520,21 +1495,21 @@ export class LewisStructureCanvas extends FASTElement {
 
 			this.settingsService.whenMode.subscribe(mode => {
 				if (mode == InteractionMode.draw) {
-					if (this.settingsService.currentBondType !== BondType.lonePair) {
-						for (let i = 0; i < elementButtons.length; i++) {
-							let input = elementButtons.item(i);
-							(input as any).disabled = false;
-						}
-					}
+					// if (this.settingsService.currentBondType !== BondType.lonePair) {
+					// 	for (let i = 0; i < elementButtons.length; i++) {
+					// 		let input = elementButtons.item(i);
+					// 		input.disabled = false;
+					// 	}
+					// }
 					for (let i = 0; i < electronButtons.length; i++) {
 						let input = electronButtons.item(i);
 						input.disabled = false;
 					}
 				} else {
-					for (let i = 0; i < elementButtons.length; i++) {
-						let input = (elementButtons.item(i) as HTMLInputElement);
-						(input as any).disabled = true;
-					}
+					// for (let i = 0; i < elementButtons.length; i++) {
+					// 	let input = (elementButtons.item(i));
+					// 	input.disabled = true;
+					// }
 					for (let i = 0; i < electronButtons.length; i++) {
 						let input = electronButtons.item(i);
 						input.disabled = true;
@@ -1548,7 +1523,6 @@ export class LewisStructureCanvas extends FASTElement {
 			});
 		}
 
-		await loadModule;
 		// LOAD MOLECULE IF ATTR are set
 		if (this.mol != null) {
 			this.loadMoleculeUsingMolAsync(this.mol, true);
@@ -1558,7 +1532,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 	resetButtons(buttons: NodeListOf<Button>) {
 		for (let i = 0; i < buttons.length; i++) {
-			buttons[i].appearance = "outline";
+			buttons[i].appearance = ButtonAppearance.outline;
 		}
 	}
 }
