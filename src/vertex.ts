@@ -269,7 +269,7 @@ export class Vertex implements IDisposable {
 
 	public dispose() {
 
-		this._group.mousedown(null);
+		this._group.mousedown(()=>{});  // WAS NULL inside method
 		this._circle.remove();
 		this._text.remove();
 		this._group.remove();
