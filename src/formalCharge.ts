@@ -136,7 +136,7 @@ export class FormalCharge implements IDisposable {
         this._group.mouseover(this.mouseOver.bind(this));
         this._group.mouseout(this.mouseOut.bind(this));
 
-        this._group.mousedown(this.mouseDown.bind(this));
+        this._group.pointerdown(this.pointerDown.bind(this));
         //this._group.move(this.onObjectMoving.bind(this));
 
 
@@ -176,7 +176,7 @@ export class FormalCharge implements IDisposable {
         this._group.remove();
     }
 
-    mouseDown(ev: MouseEvent) {
+    pointerDown(ev: PointerEvent) {
         if (ev.button != 0) {
             ev.preventDefault();
             return;

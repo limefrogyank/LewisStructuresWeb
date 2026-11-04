@@ -1394,7 +1394,7 @@ export class LewisStructureCanvas extends FASTElement {
 
 
 		// click is acting weird, can't prevent it with stopPropagation
-		this.mainSVG.mousedown((ev: MouseEvent) => {
+		this.mainSVG.pointerdown((ev: PointerEvent) => {
 			if (ev.button != 0) {
 				ev.preventDefault();
 				return;

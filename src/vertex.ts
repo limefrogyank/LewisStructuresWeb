@@ -190,7 +190,7 @@ export class Vertex implements IDisposable {
 			//console.log("TRYING TO STOP PROP of click"); 
 		});
 
-		this._group.mousedown(this.mouseDown.bind(this));
+		this._group.pointerdown(this.pointerDown.bind(this));
 		//this._circle.mousedown(this.mouseDown);
 		this._group.mouseenter(this.mouseEnter.bind(this));
 		this._group.mouseleave(this.mouseLeave.bind(this));
@@ -269,7 +269,7 @@ export class Vertex implements IDisposable {
 
 	public dispose() {
 
-		this._group.mousedown(()=>{});  // WAS NULL inside method
+		this._group.pointerdown(()=>{});  // WAS NULL inside method
 		this._circle.remove();
 		this._text.remove();
 		this._group.remove();
@@ -376,7 +376,7 @@ export class Vertex implements IDisposable {
 		this._tabDiv.innerText = this._ariaLabel;
 	}
 
-	mouseDown(ev: MouseEvent) {
+	pointerDown(ev: PointerEvent) {
 		if (ev.button != 0){
 			ev.preventDefault();
 			return;

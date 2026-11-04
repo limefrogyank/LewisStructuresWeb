@@ -268,7 +268,7 @@ export class PeriodicTableModal extends FASTElement {
 
 
 
-	mousedown(ev: Event) {
+	pointerDown(ev: PointerEvent) {
 		this.cancelClick();
 	}
 
