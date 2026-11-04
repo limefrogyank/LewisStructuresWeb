@@ -469,12 +469,17 @@ export class Vertex implements IDisposable {
 				} else {
 					chargeMarker = new Kekule.ChemMarker.Charge();
 					this.atom.appendMarker(chargeMarker);
-					chargeMarker.value = 0;
+					chargeMarker.value.charge = 0;
 				}
-				chargeMarker.value += this.settingsService.currentBondType == BondType.positive ? 1 : -1;
-				this.atom.setCharge(chargeMarker.value);
+				const toAdd = (this.settingsService.currentBondType == BondType.positive ? 1 : -1);
+				const originalCharge = (chargeMarker as any).getValue();
+				originalCharge.charge += toAdd;
+				(chargeMarker as any).setValue(originalCharge);
+
+//				chargeMarker.value.charge += toAdd;
+				this.atom.setCharge(chargeMarker.value.charge);
 				//console.log(chargeMarker.value);
-				if (chargeMarker.value == 0) {
+				if (chargeMarker.value.charge == 0) {
 					//this.atom.removeMarker(chargeMarker);
 					if (chargeSVG != null) {
 						chargeSVG.dispose();
@@ -490,7 +495,7 @@ export class Vertex implements IDisposable {
 						});
 						this.attachments.push(chargeSVG);
 					} else {
-						chargeSVG.updateCharge(chargeMarker.value);
+						chargeSVG.updateCharge(chargeMarker.value.charge);
 					}
 				}
 				// don't need this because it will fire on vertex mouse up
