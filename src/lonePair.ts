@@ -33,8 +33,8 @@ export class LonePair implements IDisposable {
 	private _selectionEllipse: SvgEllipse;
 	public radians: number;
 
-	private _mouseMoveEventRef;
-	private _mouseUpEventRef;
+	private _pointerMoveEventRef;
+	private _pointerUpEventRef;
 
 	private _position$: Subject<Position>;
 	public Position$: Observable<Position>;
@@ -121,10 +121,10 @@ export class LonePair implements IDisposable {
 
 
 		if (this.settingsService.isMoveable) {
-			this._mouseMoveEventRef = this.mouseMoveBondDrawing.bind(this);
-			window.addEventListener('pointermove', this._mouseMoveEventRef);
-			this._mouseUpEventRef = this.mouseUp.bind(this);
-			window.addEventListener('pointerup', this._mouseUpEventRef);
+			this._pointerMoveEventRef = this.pointerMoveBondDrawing.bind(this);
+			window.addEventListener('pointermove', this._pointerMoveEventRef);
+			this._pointerUpEventRef = this.pointerUp.bind(this);
+			window.addEventListener('pointerup', this._pointerUpEventRef);
 
 		} else if (this.settingsService.isEraseMode) {
 			this.owner.removeAttachment(this);
@@ -137,7 +137,7 @@ export class LonePair implements IDisposable {
 	}
 
 
-	mouseMoveBondDrawing(ev: PointerEvent) {
+	pointerMoveBondDrawing(ev: PointerEvent) {
 		const bounds = this._svg.node.getBoundingClientRect();
 		let canvasCoords : Position = {x:ev.clientX-bounds.left,y:ev.clientY-bounds.top};
 		if (canvasCoords == null) {
@@ -208,9 +208,9 @@ export class LonePair implements IDisposable {
 	// 	this._position.next(new fabric.Point(x, y));
 	// }
 
-	mouseUp(ev: PointerEvent) {
-		window.removeEventListener('pointermove', this._mouseMoveEventRef);
-		window.removeEventListener('pointerup', this._mouseUpEventRef);
+	pointerUp(ev: PointerEvent) {
+		window.removeEventListener('pointermove', this._pointerMoveEventRef);
+		window.removeEventListener('pointerup', this._pointerUpEventRef);
 		this._svg.fire('change', this);
 	}
 

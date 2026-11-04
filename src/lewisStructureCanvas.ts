@@ -1395,12 +1395,13 @@ export class LewisStructureCanvas extends FASTElement {
 
 		// click is acting weird, can't prevent it with stopPropagation
 		this.mainSVG.pointerdown((ev: PointerEvent) => {
-			if (ev.button != 0) {
+			if (ev.button !== 0) {
 				ev.preventDefault();
 				return;
 			}
 
 			if (this.settingsService.isDrawMode && this.molecule != null) {
+				ev.stopImmediatePropagation();
 				const bounds = this.mainSVG.node.getBoundingClientRect();
 				var vertex = new Vertex({
 					identity: this.settingsService.currentElement,
@@ -1409,6 +1410,7 @@ export class LewisStructureCanvas extends FASTElement {
 					molecule: this.molecule,
 					svg: this.mainSVG
 				});
+				
 			}
 		});
 

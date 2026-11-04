@@ -48,8 +48,8 @@ export class Vertex implements IDisposable {
 
 	public disableEvents: boolean = false;
 	private _hasMoved: boolean;
-	private _mouseMoveEventRef;
-	private _mouseUpEventRef;
+	private _pointerMoveEventRef;
+	private _pointerUpEventRef;
 
 	private _position$: BehaviorSubject<Position>;
 	public Position$: Observable<Position>;
@@ -89,6 +89,11 @@ export class Vertex implements IDisposable {
 			//this._svg.fire('change', this);
 
 		});
+
+		(this._group.node as any).__vertex = this; // putting an instance of vertex on the group svg node
+		// in pointer/touch mode, we can use pointermove and poll underneath to know what vertex is there
+		// this is done normally with mouseover, but there's no equivalent for touch/pointer
+
 		// this._div = SVG('<div tabindex="0" aria-label="TESTING" style="background:transparent;width:100%;height:100%;opacity:0;">' + options.identity + '.</div>');
 		// this._foreignObject = this._group.foreignObject(Vertex.circleRadius * 2, Vertex.circleRadius * 2).cx(0).cy(0).add(this._div);
 		// this._div.node.textContent = "CHANGED it!"
@@ -175,7 +180,7 @@ export class Vertex implements IDisposable {
 		this._group.on('dragmove', (ev) => {
 			const transform = this._group.transform();
 			this._position$.next({ x: transform.translateX ?? 0, y: transform.translateY ?? 0 });
-			
+
 		});
 		this._group.on('dragend', (ev) => {
 			// const transform = this._group.transform();
@@ -184,9 +189,9 @@ export class Vertex implements IDisposable {
 
 		});
 
-		this._group.click((ev: MouseEvent) => { 
-			ev.preventDefault(); 
-			ev.stopPropagation(); 
+		this._group.click((ev: MouseEvent) => {
+			ev.preventDefault();
+			ev.stopPropagation();
 			//console.log("TRYING TO STOP PROP of click"); 
 		});
 
@@ -244,6 +249,11 @@ export class Vertex implements IDisposable {
 			ev.preventDefault();
 			return;
 		}
+
+		if ((ev as any).sourceCapabilities?.firesTouchEvents) {
+        return;
+    }
+
 		this._runner?.reset();
 		this._runner = this._circle
 			.animate({
@@ -254,6 +264,7 @@ export class Vertex implements IDisposable {
 				times: 1,
 				wait: 0
 			}).attr({ 'stroke-opacity': 1 });
+		console.log(ev.type);
 	}
 
 	mouseLeave(ev: MouseEvent) {
@@ -261,7 +272,10 @@ export class Vertex implements IDisposable {
 			ev.preventDefault();
 			return;
 		}
-		//this._circle.timeline().stop();
+		this.removeHighlight();
+	}
+
+	public removeHighlight(){
 		this._circle.transform({ rotate: 0 });
 		this._runner?.reset();
 		this._runner = this._circle.animate(200).attr({ 'stroke-opacity': 0 });
@@ -269,13 +283,13 @@ export class Vertex implements IDisposable {
 
 	public dispose() {
 
-		this._group.pointerdown(()=>{});  // WAS NULL inside method
+		this._group.pointerdown(() => { });  // WAS NULL inside method
 		this._circle.remove();
 		this._text.remove();
 		this._group.remove();
 
 		let index = this.attachments.length - 1;
-		while (index >= 0){
+		while (index >= 0) {
 			(this.attachments[index] as any).dispose();
 			index -= 1;
 		}
@@ -312,7 +326,7 @@ export class Vertex implements IDisposable {
 		let nodes = this.atom.getLinkedChemNodes();
 		let bonds = this.atom.getLinkedBonds();
 		// console.log('getMarkersOfType error?');
-		let lps : Kekule.ChemMarker.UnbondedElectronSet[] = this.atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet, false);
+		let lps: Kekule.ChemMarker.UnbondedElectronSet[] = this.atom.getMarkersOfType(Kekule.ChemMarker.UnbondedElectronSet, false);
 
 		if (lps.length > 0) {
 			this._ariaLabel += "with " + lps.length + " lone pair" + (lps.length > 1 ? "s" : "") + " of electrons ";
@@ -377,7 +391,7 @@ export class Vertex implements IDisposable {
 	}
 
 	pointerDown(ev: PointerEvent) {
-		if (ev.button != 0){
+		if (ev.button != 0) {
 			ev.preventDefault();
 			return;
 		}
@@ -390,17 +404,17 @@ export class Vertex implements IDisposable {
 		} else if (this.settingsService.isEraseMode) {
 
 			this.dispose();
-			
+
 			// change here because dispose could be fired by other mouse event
 			this._svg.fire('change', this);
 
 
 		} else if (this.settingsService.isDrawMode) {
 
-			this._mouseMoveEventRef = this.mouseMove.bind(this);
-			this._mouseUpEventRef = this.mouseUp.bind(this);
-			this._svg.mousemove(this._mouseMoveEventRef);
-			this._svg.mouseup(this._mouseUpEventRef);
+			this._pointerMoveEventRef = this.pointerMove.bind(this);
+			this._pointerUpEventRef = this.pointerUp.bind(this);
+			this._svg.pointermove(this._pointerMoveEventRef);
+			this._svg.pointerup(this._pointerUpEventRef);
 
 			let centerX = this._group.transform().translateX;
 			let centerY = this._group.transform().translateY;
@@ -444,10 +458,10 @@ export class Vertex implements IDisposable {
 				});
 				console.log("created temp LP");
 				this.attachments.push(this._tempLP);
-			// FORMAL CHARGE
+				// FORMAL CHARGE
 			} else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
-				let chargeMarker : Kekule.ChemMarker.Charge;
-				let chargeSVG : FormalCharge|null = null;
+				let chargeMarker: Kekule.ChemMarker.Charge;
+				let chargeSVG: FormalCharge | null = null;
 				const markers = this.atom.getMarkersOfType(Kekule.ChemMarker.Charge);
 				if (markers != null && markers.length > 0) {
 					chargeMarker = markers[0];
@@ -460,18 +474,18 @@ export class Vertex implements IDisposable {
 				chargeMarker.value += this.settingsService.currentBondType == BondType.positive ? 1 : -1;
 				this.atom.setCharge(chargeMarker.value);
 				//console.log(chargeMarker.value);
-				if (chargeMarker.value == 0){
+				if (chargeMarker.value == 0) {
 					//this.atom.removeMarker(chargeMarker);
-					if (chargeSVG != null){
+					if (chargeSVG != null) {
 						chargeSVG.dispose();
 					}
 				} else {
-					if (chargeSVG == null){
+					if (chargeSVG == null) {
 						chargeSVG = new FormalCharge({
 							owner: this,
 							molecule: this._molecule,
 							svg: this._svg,
-							charge: chargeMarker, 
+							charge: chargeMarker,
 							radians: 0
 						});
 						this.attachments.push(chargeSVG);
@@ -526,20 +540,24 @@ export class Vertex implements IDisposable {
 
 	}
 
-	mouseUp(ev: MouseEvent) {
+	pointerUp(ev: PointerEvent) {
 		// if (this.disableEvents){
 		// 	ev.preventDefault();
 		// 	return;
 		// }
-		(ev as MouseEvent).stopImmediatePropagation();
-		this._svg.off('mousemove', this._mouseMoveEventRef);
-		this._svg.off('mouseup', this._mouseUpEventRef);
+		ev.stopImmediatePropagation();
+		this._svg.off('pointermove', this._pointerMoveEventRef);
+		this._svg.off('pointerup', this._pointerUpEventRef);
 		// 	this.canvas?.off('mouse:up', this._mouseUpEventRef);
+		if (ev.pointerType == "touch") {
+			// no mouseleave event for touch, so remove highlight here
+			this.removeHighlight();
+		}
 
 		if (this.settingsService.currentBondType == BondType.lonePair) {
-				
-				// this.updateAriaLabel();
-		}else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
+
+			// this.updateAriaLabel();
+		} else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
 			// this.updateAriaLabel( 
 		} else {
 
@@ -611,7 +629,7 @@ export class Vertex implements IDisposable {
 
 		}
 
-	
+
 		// Fire change on mouse up.  NOT SURE ABOUT THIS.
 		// mouse up fires only for draw mode:  end drag (covered), change atom name
 		this._svg.fire('change', this);
@@ -622,13 +640,13 @@ export class Vertex implements IDisposable {
 		this.attachments.push(connector);
 	}
 
-	public addLonePair(lonePair:LonePair){
-	 	this.attachments.push(lonePair);
+	public addLonePair(lonePair: LonePair) {
+		this.attachments.push(lonePair);
 	}
 
-	public addFormalCharge(charge:FormalCharge){
+	public addFormalCharge(charge: FormalCharge) {
 		this.attachments.push(charge);
-   }
+	}
 
 	public removeAttachment(item: Object) {
 		let subs = this.attachmentSubs.get(item);
@@ -642,7 +660,7 @@ export class Vertex implements IDisposable {
 		this.attachments.splice(this.attachments.indexOf(item), 1);
 	}
 
-	mouseMove(ev: MouseEvent) {
+	pointerMove(ev: PointerEvent) {
 		if (this.disableEvents) {
 			ev.preventDefault();
 			return;
@@ -663,19 +681,55 @@ export class Vertex implements IDisposable {
 		} else {
 
 			if (this.settingsService.currentBondType == BondType.lonePair) {
-				
-				let canvasCoords : Position = {x:ev.clientX-bounds.left,y:ev.clientY-bounds.top};
+
+				let canvasCoords: Position = { x: ev.clientX - bounds.left, y: ev.clientY - bounds.top };
 				this._tempLP.moveUsingCoord(canvasCoords);
 			} else if (this.settingsService.currentBondType == BondType.positive || this.settingsService.currentBondType == BondType.negative) {
 				// this.updateAriaLabel(  
 			} else {
+				// in tablet mode, the mouseover event is not firing, 
+				// so we need to check what's underneath the mouse and 
+				// set the settingsService's hoveredVertex to the vertex underneath the mouse if there is one
 				this._tempVertex?.moveTo(ev.clientX - bounds.left, ev.clientY - bounds.top);
+
+				const vertex = this.findVertexUnderPointer(ev.clientX, ev.clientY);
+
+				this.settingsService.hoveredVertex = vertex;
 			}
 		}
 	}
-	
-	public bondCount(){
-		let bondCount= 0;
+
+	private findVertexUnderPointer(x: number, y: number): Vertex | null {
+		let el = this.deepElementFromPoint(x, y);
+		let vertex;
+		while (!vertex && el && el.tagName.toUpperCase() != "SVG") {
+			vertex = (el as any)?.__vertex as Vertex | undefined;
+			el = el.parentElement;
+		}
+		if (!vertex) {
+			vertex = null;
+		}
+		return vertex;
+	}
+
+	private deepElementFromPoint(x: number, y: number, root: Document | ShadowRoot = document): globalThis.Element | null {
+		let el = root.elementFromPoint(x, y);
+		while (el?.shadowRoot) {
+			const inner = el.shadowRoot.elementFromPoint(x, y);
+
+			if (!inner || inner === el) {
+				break;
+			}
+
+			el = inner;
+		}
+
+		return el;
+
+	}
+
+	public bondCount() {
+		let bondCount = 0;
 		for (let i = 0; i < this.attachments.length; i++) {
 			if (this.attachments[i] instanceof Connector) {
 				bondCount++;
@@ -684,7 +738,7 @@ export class Vertex implements IDisposable {
 		return bondCount;
 	}
 
-	public getAngleThatFits(coordinationNumber:number = 0){
+	public getAngleThatFits(coordinationNumber: number = 0) {
 		let angles: number[] = [];
 		for (let i = 0; i < this.attachments.length; i++) {
 			if (this.attachments[i] instanceof LonePair) {
@@ -704,21 +758,21 @@ export class Vertex implements IDisposable {
 		return newAngle;
 	}
 
-	findNewAngle(angles: number[], coordinationNumber:number = 0): number {
+	findNewAngle(angles: number[], coordinationNumber: number = 0): number {
 		let newAngle: number = 0;
 
 		// We don't know the overall coordination number, so just make them fit well up to a point...
 		// Also, if we get a coordination number that is too small for the number of angles we're trying to fit.
-		if (coordinationNumber== 0 || angles.length >= coordinationNumber){
+		if (coordinationNumber == 0 || angles.length >= coordinationNumber) {
 			if (angles.length == 0) {
 				return newAngle;
 			} else if (angles.length == 1) {
 				return angles[0] + (Math.PI / 2);
 			} else if (angles.length == 2) {
 				// check if angles are ~90 apart
-				const diff = angles[1]-angles[0];
-				if (Math.abs(diff) - (Math.PI/2) < 0.1){
-					if (diff > 0){
+				const diff = angles[1] - angles[0];
+				if (Math.abs(diff) - (Math.PI / 2) < 0.1) {
+					if (diff > 0) {
 						return angles[1] + (Math.PI / 2);
 					} else {
 						return angles[1] - (Math.PI / 2);
@@ -726,22 +780,22 @@ export class Vertex implements IDisposable {
 				} else {
 					return this.useBlockedRangeMethod(angles);
 				}
-			} else if (angles.length == 3){
-				angles.forEach(v=>{
-					if (Math.sign(v) == -1){
-						v+=Math.PI;
+			} else if (angles.length == 3) {
+				angles.forEach(v => {
+					if (Math.sign(v) == -1) {
+						v += Math.PI;
 					}
 				});
-				const diffs = [angles[1]-angles[0],angles[2]-angles[1], angles[2]-angles[0]];
+				const diffs = [angles[1] - angles[0], angles[2] - angles[1], angles[2] - angles[0]];
 				var indexOfMaxValue = diffs.reduce((iMax, x, i, arr) => Math.abs(x) > Math.abs(arr[iMax]) ? i : iMax, 0);
-				let rightAngles=true;
-				diffs.forEach((v,i)=>{
-					if (i != indexOfMaxValue && Math.abs(v) - (Math.PI/2) > 0.1){
-						rightAngles=false;
+				let rightAngles = true;
+				diffs.forEach((v, i) => {
+					if (i != indexOfMaxValue && Math.abs(v) - (Math.PI / 2) > 0.1) {
+						rightAngles = false;
 					}
 				});
-				if (rightAngles){
-					switch (indexOfMaxValue){
+				if (rightAngles) {
+					switch (indexOfMaxValue) {
 						case 0:
 							return angles[2] + Math.PI;
 						case 1:
@@ -757,12 +811,12 @@ export class Vertex implements IDisposable {
 			} else {
 				return this.useBlockedRangeMethod(angles);
 			}
-		}else{
+		} else {
 			return this.useBlockedRangeMethod(angles, coordinationNumber);
 		}
 	}
 
-	useBlockedRangeMethod(angles: number[], coordinationNumber: number = 0):number{
+	useBlockedRangeMethod(angles: number[], coordinationNumber: number = 0): number {
 		let blockedRange = new Range(coordinationNumber);
 		for (let i = 0; i < angles.length; i++) {
 			blockedRange.addRadian(angles[i]);

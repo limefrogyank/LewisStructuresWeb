@@ -43,7 +43,7 @@ export class Connector implements IDisposable {
 	_vertex2SymbolSubscription: Subscription;
 
 	_center: Vector2;
-	_lastEndpoints: [Vector2,Vector2];
+	_lastEndpoints: [Vector2, Vector2];
 
 	_molecule: Kekule.Molecule;
 	public bond: Kekule.Bond;
@@ -96,31 +96,31 @@ export class Connector implements IDisposable {
 		this._bondType.subscribe(x => {
 			//this.setBondType(x);
 			//if (this._bondType.value != x){
-				switch (x) {
-					case BondType.single:
-						this.bond.setBondOrder(1);
-						this.bond.stereo = Kekule.BondStereo.NONE;
-						break;
-					case BondType.solid:
-						this.bond.setBondOrder(1);
-						this.bond.stereo = Kekule.BondStereo.UP;
-						break;
-					case BondType.dashed:
-						this.bond.setBondOrder(1);
-						this.bond.stereo = Kekule.BondStereo.DOWN;
-						break;
-					case BondType.double:
-						this.bond.setBondOrder(2);
-						this.bond.stereo = Kekule.BondStereo.NONE;
-						break;
-					case BondType.triple:
-						this.bond.setBondOrder(3);
-						this.bond.stereo = Kekule.BondStereo.NONE;
-						break;
-				}
-				
+			switch (x) {
+				case BondType.single:
+					this.bond.setBondOrder(1);
+					this.bond.stereo = Kekule.BondStereo.NONE;
+					break;
+				case BondType.solid:
+					this.bond.setBondOrder(1);
+					this.bond.stereo = Kekule.BondStereo.UP;
+					break;
+				case BondType.dashed:
+					this.bond.setBondOrder(1);
+					this.bond.stereo = Kekule.BondStereo.DOWN;
+					break;
+				case BondType.double:
+					this.bond.setBondOrder(2);
+					this.bond.stereo = Kekule.BondStereo.NONE;
+					break;
+				case BondType.triple:
+					this.bond.setBondOrder(3);
+					this.bond.stereo = Kekule.BondStereo.NONE;
+					break;
+			}
+
 			//}
-	
+
 
 		});
 		//let center = this.getCenterPoints();
@@ -129,10 +129,10 @@ export class Connector implements IDisposable {
 		//let angle = Math.atan2(linePoints.y2-linePoints.y1, linePoints.x2-linePoints.x1);
 
 		this._svg = options.svg;
-		this._group = this._svg.group().cx(0).cy(0).attr("tabindex","0").attr("aria-label", "Bond");;//.transform({translateX: options.v})
+		this._group = this._svg.group().cx(0).cy(0).attr("tabindex", "0").attr("aria-label", "Bond");;//.transform({translateX: options.v})
 
 		this._selectableCircle = this._group.ellipse()
-			.attr({ 'fill-opacity': 0.0, fill: hoverColor})
+			.attr({ 'fill-opacity': 0.0, fill: hoverColor })
 			.stroke({ color: hoverColor, width: 1, opacity: 0 })
 			.filterWith((add) => {
 				add.gaussianBlur(2, 2);
@@ -183,11 +183,11 @@ export class Connector implements IDisposable {
 		//this._svg.fire('change', this);
 	}
 
-	public getAngleFrom(from:Vertex){
+	public getAngleFrom(from: Vertex) {
 		let to: Vertex;
-		if (this._vertex1 == from){
+		if (this._vertex1 == from) {
 			to = this._vertex2;
-		} else if (this._vertex2 == from){
+		} else if (this._vertex2 == from) {
 			to = this._vertex1;
 		} else {
 			// vertex is not part of this connector
@@ -196,21 +196,21 @@ export class Connector implements IDisposable {
 		return Math.atan2(to.Position.y - from.Position.y, to.Position.x - from.Position.x);
 	}
 
-	private adjustSelectableCircle(){
+	private adjustSelectableCircle() {
 		const v1p = this._vertex1.Position;
 		const v2p = this._vertex2.Position;
-		let distance = Math.sqrt(Math.pow(v2p.x - v1p.x,2) + Math.pow(v2p.y-v1p.y,2));
-		let angle = Math.atan2(v2p.y-v1p.y,v2p.x-v1p.x);
-		let center :Position= {x:(v2p.x + v1p.x)/2, y:(v2p.y + v1p.y)/2};
+		let distance = Math.sqrt(Math.pow(v2p.x - v1p.x, 2) + Math.pow(v2p.y - v1p.y, 2));
+		let angle = Math.atan2(v2p.y - v1p.y, v2p.x - v1p.x);
+		let center: Position = { x: (v2p.x + v1p.x) / 2, y: (v2p.y + v1p.y) / 2 };
 
-		distance = (distance > (2*Vertex.circleRadius) ? distance-(2*Vertex.circleRadius) : distance*2/3);
+		distance = (distance > (2 * Vertex.circleRadius) ? distance - (2 * Vertex.circleRadius) : distance * 2 / 3);
 		this._selectableCircle.width(distance).height(14).cx(center.x).cy(center.y);
-		this._selectableCircle.untransform().rotate(angle*360/2/Math.PI);
+		this._selectableCircle.untransform().rotate(angle * 360 / 2 / Math.PI);
 	}
 
 	// this will move line to new coords.  If coords omitted, will "redraw" line with current bondtype and same position.
 	private moveLine(endpoints?: [Vector2, Vector2]) {
-		if (endpoints === undefined){
+		if (endpoints === undefined) {
 			endpoints = this._lastEndpoints;
 		}
 		let vector: Vector2 = { x: endpoints[1].x - endpoints[0].x, y: endpoints[1].y - endpoints[0].y };
@@ -221,7 +221,7 @@ export class Connector implements IDisposable {
 		let normLength = Vertex.circleRadius;
 		if (length < Vertex.circleRadius * 3) {
 			dashArray = `0 ${Vertex.circleRadius / 2} ${Math.floor(length - (Vertex.circleRadius * 3 / 2)).toString()}`;
-			normLength = normLength/2;
+			normLength = normLength / 2;
 		}
 		//let length = Math.sqrt(Math.pow(endpoints[0].x-endpoints[1].x,2) + Math.pow(endpoints[0].y-endpoints[1].y,2));
 		switch (this._bondType.value) {
@@ -236,8 +236,8 @@ export class Connector implements IDisposable {
 				}
 				if (this._line1 == null) {
 					this._line1 = this._group.line(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y)
-					.stroke("#000000")
-					.attr("pointer-events", "none");
+						.stroke("#000000")
+						.attr("pointer-events", "none");
 				} else {
 					this._line1.plot(endpoints[0].x, endpoints[0].y, endpoints[1].x, endpoints[1].y);
 				}
@@ -331,15 +331,15 @@ export class Connector implements IDisposable {
 				}
 				break;
 			case BondType.dashed:
-				let angle = Math.atan2(perpVector.x,perpVector.y);
+				let angle = Math.atan2(perpVector.x, perpVector.y);
 				perpVector = { x: perpVector.x * 6, y: perpVector.y * 6 };
-				if (this._pattern != null){
+				if (this._pattern != null) {
 					this._pattern.remove();
 				}
-				this._pattern = this._svg.pattern(8,8,add=>{
-					add.rect(4,8).fill('#000000');
-					add.rect(4,8).move(4,0).fill('#ffffff00');
-				}).rotate(-angle*360/2/Math.PI);
+				this._pattern = this._svg.pattern(8, 8, add => {
+					add.rect(4, 8).fill('#000000');
+					add.rect(4, 8).move(4, 0).fill('#ffffff00');
+				}).rotate(-angle * 360 / 2 / Math.PI);
 				if (this._line1 != null) {
 					this._line1.remove();
 					this._line1 = null;
@@ -395,15 +395,15 @@ export class Connector implements IDisposable {
 						${endpoints[1].x - (normVector.x * normLength) - perpVector.x},${endpoints[1].y - (normVector.y * normLength) - perpVector.y}`);
 				}
 				this._polygon.fill("#000000");
-				
+
 				break;
 
 		}
-		let bboxElement : Shape|null = this._line1;
-		if (this._line1 == null && this._polygon != null){
+		let bboxElement: Shape | null = this._line1;
+		if (this._line1 == null && this._polygon != null) {
 			bboxElement = this._polygon;
-		} 
-		if (bboxElement == null){
+		}
+		if (bboxElement == null) {
 			return;
 		}
 		// const bbox = bboxElement.bbox();
@@ -413,9 +413,9 @@ export class Connector implements IDisposable {
 
 	public setBondType(bondType: BondType) {
 		//this._bondType=bondType;
-		if (this._bondType.value != bondType){
+		if (this._bondType.value != bondType) {
 			this._bondType.next(bondType);
-			this._svg.fire('change', this);  
+			this._svg.fire('change', this);
 			this.moveLine();
 		}
 	}
@@ -445,23 +445,23 @@ export class Connector implements IDisposable {
 	// 	// });
 	// }
 
-	pointerDown(ev:MouseEvent){
+	pointerDown(ev: MouseEvent) {
 		//console.log("mousedown on connector!");
 		ev.stopPropagation();
-		if (this.settingsService.isEraseMode){
+		if (this.settingsService.isEraseMode) {
 			this.dispose();
-		} else if (this.settingsService.isDrawMode){
+		} else if (this.settingsService.isDrawMode) {
 			// change bond order
-			if (this.settingsService.currentBondType === BondType.lonePair){
+			if (this.settingsService.currentBondType === BondType.lonePair) {
 				// don't change a bond into a lone pair.
 				return;
 			}
-			if (this._bondType.value !== this.settingsService.currentBondType){
+			if (this._bondType.value !== this.settingsService.currentBondType) {
 				this.setBondType(this.settingsService.currentBondType);
 				//this._bondType.next(settingsService.currentBondType);
 				this.moveLine(); // just a way to redraw the line
 				//this._bondType = settingsService.currentBondType;
-				
+
 			}
 
 		}
@@ -493,19 +493,23 @@ export class Connector implements IDisposable {
 	// }
 
 
-	mouseOverObject(ev:MouseEvent){
-		if (this._runner != null){
+	mouseOverObject(ev: MouseEvent) {
+		if (this._runner != null) {
 			this._runner.finish();
 		}
-		this._runner = this._selectableCircle.animate().attr('fill-opacity','0.5');
+		if ((ev as any).sourceCapabilities?.firesTouchEvents) {
+			return;
+		}
+
+		this._runner = this._selectableCircle.animate().attr('fill-opacity', '0.5');
 	}
 
-	mouseOutObject(ev:MouseEvent){
-		if (this._runner != null){
+	mouseOutObject(ev: MouseEvent) {
+		if (this._runner != null) {
 			this._runner.finish();
 		}
-		this._runner = this._selectableCircle.animate().attr('fill-opacity','0');//, {
-	} 
+		this._runner = this._selectableCircle.animate().attr('fill-opacity', '0');//, {
+	}
 }
 
 
