@@ -343,7 +343,7 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr({ mode: 'boolean', attribute: 'show-formal-charges'}) useFormalCharge: boolean = false;
 	@attr({ mode: 'boolean', attribute: 'flat'}) noPerspective: boolean = false;
 
-	debug: boolean = false;
+	debug: boolean = true;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;
@@ -1372,6 +1372,7 @@ export class LewisStructureCanvas extends FASTElement {
 	connectedCallback() {
 		super.connectedCallback();
 		this.mainSVG = SVG();
+		this.mainSVG.css('touch-action', 'none');
 		this.mainSVG.addTo(this.svgContainer);
 		this.mainSVG.size(this.width, this.height);
 		this.mainSVG.on('change', (e: any) => {
