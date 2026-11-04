@@ -343,7 +343,7 @@ export class LewisStructureCanvas extends FASTElement {
 	@attr({ mode: 'boolean', attribute: 'show-formal-charges'}) useFormalCharge: boolean = false;
 	@attr({ mode: 'boolean', attribute: 'flat'}) noPerspective: boolean = false;
 
-	debug: boolean = true;
+	debug: boolean = false;
 
 	periodicTableButton: HTMLButtonElement;
 	periodicTableModal: PeriodicTableModal;
